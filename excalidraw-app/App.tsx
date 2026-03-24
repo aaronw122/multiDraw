@@ -125,7 +125,7 @@ import {
   importUsernameFromLocalStorage,
 } from "./data/localStorage";
 import { loadScene } from "./data/SceneStore";
-import { updateProject } from "./data/ProjectStore";
+import { createProject, updateProject } from "./data/ProjectStore";
 
 import { loadFilesFromFirebase } from "./data/firebase";
 import {
@@ -303,7 +303,11 @@ const initializeScene = async (opts: {
       }
       scene.scrollToContent = true;
       if (!roomLinkData) {
-        opts.navigate("/", { replace: true });
+        // Strip the hash but stay in the editor if we're inside a project
+        const cleanUrl = opts.projectId
+          ? `/project/${opts.projectId}`
+          : "/";
+        opts.navigate(cleanUrl, { replace: true });
       }
     } else {
       // https://github.com/excalidraw/excalidraw/issues/1919
@@ -320,10 +324,16 @@ const initializeScene = async (opts: {
       }
 
       roomLinkData = null;
-      opts.navigate("/", { replace: true });
+      const fallbackUrl = opts.projectId
+        ? `/project/${opts.projectId}`
+        : "/";
+      opts.navigate(fallbackUrl, { replace: true });
     }
   } else if (externalUrlMatch) {
-    opts.navigate("/", { replace: true });
+    const cleanUrl = opts.projectId
+      ? `/project/${opts.projectId}`
+      : "/";
+    opts.navigate(cleanUrl, { replace: true });
 
     const url = externalUrlMatch[1];
     try {
@@ -1412,10 +1422,11 @@ const DashboardOrLegacyRedirect = () => {
       // lookup/creation before opening the editor.
       navigate(`/join${hash}`, { replace: true });
     } else if (hash.match(/^#json=/)) {
-      // Legacy share links: redirect to a temporary project editor
-      // preserving the hash so initializeScene can parse it.
-      const tempId = `legacy-${Date.now()}`;
-      navigate(`/project/${tempId}${hash}`, { replace: true });
+      // Legacy share links: create a real project and redirect to its
+      // editor, preserving the hash so initializeScene can parse it.
+      createProject("Imported Drawing").then((project) => {
+        navigate(`/project/${project.id}${hash}`, { replace: true });
+      });
     }
   }, [navigate]);
 
