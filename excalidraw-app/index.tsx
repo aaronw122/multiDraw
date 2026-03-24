@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 
 import "../excalidraw-app/sentry";
@@ -12,6 +13,8 @@ const root = createRoot(rootElement);
 registerSW();
 root.render(
   <StrictMode>
-    <ExcalidrawApp />
+    <BrowserRouter>
+      <ExcalidrawApp />
+    </BrowserRouter>
   </StrictMode>,
 );
