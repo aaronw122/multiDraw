@@ -148,7 +148,7 @@ import "./index.scss";
 
 import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanner";
 import { AppSidebar } from "./components/AppSidebar";
-import { DashboardPlaceholder } from "./pages/DashboardPlaceholder";
+import { Dashboard } from "./pages/Dashboard";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -1298,7 +1298,7 @@ const DashboardOrLegacyRedirect = () => {
     return null;
   }
 
-  return <DashboardPlaceholder />;
+  return <Dashboard />;
 };
 
 const ExcalidrawApp = () => {
@@ -1314,7 +1314,7 @@ const ExcalidrawApp = () => {
         <Routes>
           <Route path="/" element={<DashboardOrLegacyRedirect />} />
           <Route path="/project/:id" element={<ProjectEditorRoute />} />
-          <Route path="/join" element={<DashboardPlaceholder />} />
+          <Route path="/join" element={<Dashboard />} />
           <Route path="*" element={<DashboardOrLegacyRedirect />} />
         </Routes>
       </Provider>
