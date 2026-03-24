@@ -127,6 +127,8 @@ export interface CollabAPI {
 
 interface CollabProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
+  navigate: (to: string, opts?: { replace?: boolean }) => void;
+  projectId?: string;
 }
 
 class Collab extends PureComponent<CollabProps, CollabState> {
@@ -381,7 +383,10 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       // that could have been saved in other tabs while we were collaborating
       resetBrowserStateVersions();
 
-      window.history.pushState({}, APP_NAME, window.location.origin);
+      const navTarget = this.props.projectId
+        ? `/project/${this.props.projectId}`
+        : "/";
+      this.props.navigate(navTarget);
       this.destroySocketClient();
 
       LocalData.fileStorage.reset();
@@ -489,10 +494,10 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       ({ roomId, roomKey } = existingRoomLinkData);
     } else {
       ({ roomId, roomKey } = await generateCollaborationLinkData());
-      window.history.pushState(
-        {},
-        APP_NAME,
-        getCollaborationLink({ roomId, roomKey }),
+      const collabLink = getCollaborationLink({ roomId, roomKey });
+      const collabUrl = new URL(collabLink);
+      this.props.navigate(
+        `${collabUrl.pathname}${collabUrl.hash}`,
       );
     }
 

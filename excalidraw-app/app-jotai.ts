@@ -12,6 +12,13 @@ import { useLayoutEffect } from "react";
 
 export const appJotaiStore = createStore();
 
+/**
+ * Mirror of the current project ID from the URL (useParams).
+ * The URL is the source of truth — this atom exists only for convenience
+ * in deeply nested non-React code. Never write to it as a primary source.
+ */
+export const currentProjectIdAtom = atom<string | null>(null);
+
 export { atom, Provider, useAtom, useAtomValue, useSetAtom };
 
 export const useAtomWithInitialValue = <
