@@ -153,6 +153,7 @@ import "./index.scss";
 import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanner";
 import { AppSidebar } from "./components/AppSidebar";
 import { Dashboard } from "./pages/Dashboard";
+import JoinCollabRoute from "./pages/JoinCollabRoute";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -1406,18 +1407,21 @@ const DashboardOrLegacyRedirect = () => {
   useEffect(() => {
     const hash = window.location.hash;
 
-    if (hash.startsWith("#room=") || hash.match(/^#json=/)) {
-      // Legacy collab/share links: redirect to a temporary project editor
+    if (hash.startsWith("#room=")) {
+      // Legacy collab links: redirect to /join which handles project
+      // lookup/creation before opening the editor.
+      navigate(`/join${hash}`, { replace: true });
+    } else if (hash.match(/^#json=/)) {
+      // Legacy share links: redirect to a temporary project editor
       // preserving the hash so initializeScene can parse it.
       const tempId = `legacy-${Date.now()}`;
       navigate(`/project/${tempId}${hash}`, { replace: true });
     }
   }, [navigate]);
 
-  // If we didn't redirect, render the dashboard placeholder
+  // If we're about to redirect, render nothing meanwhile
   const hash = window.location.hash;
   if (hash.startsWith("#room=") || hash.match(/^#json=/)) {
-    // Will redirect on next render via useEffect; render nothing meanwhile
     return null;
   }
 
@@ -1437,7 +1441,7 @@ const ExcalidrawApp = () => {
         <Routes>
           <Route path="/" element={<DashboardOrLegacyRedirect />} />
           <Route path="/project/:id" element={<ProjectEditorRoute />} />
-          <Route path="/join" element={<Dashboard />} />
+          <Route path="/join" element={<JoinCollabRoute />} />
           <Route path="*" element={<DashboardOrLegacyRedirect />} />
         </Routes>
       </Provider>
