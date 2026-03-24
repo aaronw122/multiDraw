@@ -10,24 +10,18 @@
  *   (localStorage, indexedDB).
  */
 
-import { clearAppStateForLocalStorage } from "@excalidraw/excalidraw/appState";
-import {
-  CANVAS_SEARCH_TAB,
-  DEFAULT_SIDEBAR,
-  debounce,
-} from "@excalidraw/common";
+import { debounce } from "@excalidraw/common";
 import {
   createStore,
-  entries,
   del,
   getMany,
   set,
   setMany,
   get,
+  keys,
 } from "idb-keyval";
 
-import { appJotaiStore, atom } from "excalidraw-app/app-jotai";
-import { getNonDeletedElements } from "@excalidraw/element";
+import { atom } from "excalidraw-app/app-jotai";
 
 import type { LibraryPersistedData } from "@excalidraw/excalidraw/data/library";
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
@@ -44,105 +38,123 @@ import { SAVE_TO_LOCAL_STORAGE_TIMEOUT, STORAGE_KEYS } from "../app_constants";
 import { FileManager } from "./FileManager";
 import { FileStatusStore } from "./fileStatusStore";
 import { Locker } from "./Locker";
-import { updateBrowserStateVersion } from "./tabSync";
+import { saveScene } from "./SceneStore";
+import { broadcastFileUpdate } from "./tabSync";
 
 const filesStore = createStore("files-db", "files-store");
 
 export const localStorageQuotaExceededAtom = atom(false);
 
 class LocalFileManager extends FileManager {
-  clearObsoleteFiles = async (opts: { currentFileIds: FileId[] }) => {
-    await entries(filesStore).then((entries) => {
-      for (const [id, imageData] of entries as [FileId, BinaryFileData][]) {
-        // if image is unused (not on canvas) & is older than 1 day, delete it
-        // from storage. We check `lastRetrieved` we care about the last time
-        // the image was used (loaded on canvas), not when it was initially
-        // created.
-        if (
-          (!imageData.lastRetrieved ||
-            Date.now() - imageData.lastRetrieved > 24 * 3600 * 1000) &&
-          !opts.currentFileIds.includes(id as FileId)
-        ) {
-          del(id, filesStore);
-        }
+  clearObsoleteFiles = async (opts: {
+    currentFileIds: FileId[];
+    projectId?: string;
+  }) => {
+    const allKeys = await keys<string>(filesStore);
+
+    for (const key of allKeys) {
+      if (typeof key !== "string") {
+        continue;
       }
-    });
+
+      let fileId: FileId;
+      if (opts.projectId) {
+        const prefix = `${opts.projectId}:`;
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        fileId = key.slice(prefix.length) as FileId;
+      } else {
+        // Legacy mode: only process un-namespaced keys
+        if (key.includes(":")) {
+          continue;
+        }
+        fileId = key as FileId;
+      }
+
+      const imageData = await get<BinaryFileData>(key, filesStore);
+
+      if (!imageData) {
+        continue;
+      }
+
+      // if image is unused (not on canvas) & is older than 1 day, delete it
+      // from storage. We check `lastRetrieved` — we care about the last time
+      // the image was used (loaded on canvas), not when it was initially
+      // created.
+      if (
+        (!imageData.lastRetrieved ||
+          Date.now() - imageData.lastRetrieved > 24 * 3600 * 1000) &&
+        !opts.currentFileIds.includes(fileId)
+      ) {
+        del(key, filesStore);
+      }
+    }
   };
 }
-
-const saveDataStateToLocalStorage = (
-  elements: readonly ExcalidrawElement[],
-  appState: AppState,
-) => {
-  const localStorageQuotaExceeded = appJotaiStore.get(
-    localStorageQuotaExceededAtom,
-  );
-  try {
-    const _appState = clearAppStateForLocalStorage(appState);
-
-    if (
-      _appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
-      _appState.openSidebar.tab === CANVAS_SEARCH_TAB
-    ) {
-      _appState.openSidebar = null;
-    }
-
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_ELEMENTS,
-      JSON.stringify(getNonDeletedElements(elements)),
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_APP_STATE,
-      JSON.stringify(_appState),
-    );
-    updateBrowserStateVersion(STORAGE_KEYS.VERSION_DATA_STATE);
-    if (localStorageQuotaExceeded) {
-      appJotaiStore.set(localStorageQuotaExceededAtom, false);
-    }
-  } catch (error: any) {
-    // Unable to access window.localStorage
-    console.error(error);
-    if (isQuotaExceededError(error) && !localStorageQuotaExceeded) {
-      appJotaiStore.set(localStorageQuotaExceededAtom, true);
-    }
-  }
-};
-
-const isQuotaExceededError = (error: any) => {
-  return error instanceof DOMException && error.name === "QuotaExceededError";
-};
 
 type SavingLockTypes = "collaboration";
 
 export class LocalData {
   private static _save = debounce(
     async (
+      projectId: string | undefined,
       elements: readonly ExcalidrawElement[],
       appState: AppState,
       files: BinaryFiles,
       onFilesSaved: () => void,
     ) => {
-      saveDataStateToLocalStorage(elements, appState);
+      if (projectId) {
+        await saveScene(projectId, elements, appState);
+      }
 
-      await this.fileStorage.saveFiles({
+      await LocalData.fileStorage.saveFiles({
         elements,
         files,
+        projectId,
       });
       onFilesSaved();
     },
     SAVE_TO_LOCAL_STORAGE_TIMEOUT,
   );
 
-  /** Saves DataState, including files. Bails if saving is paused */
+  /**
+   * Saves DataState, including files. Bails if saving is paused.
+   *
+   * Accepts an optional projectId as the first argument. When provided,
+   * scene data is persisted to IndexedDB via SceneStore. When omitted
+   * (legacy call sites), only file persistence runs.
+   */
   static save = (
-    elements: readonly ExcalidrawElement[],
-    appState: AppState,
-    files: BinaryFiles,
-    onFilesSaved: () => void,
+    projectIdOrElements: string | readonly ExcalidrawElement[],
+    elementsOrAppState: readonly ExcalidrawElement[] | AppState,
+    appStateOrFiles: AppState | BinaryFiles,
+    filesOrCallback: BinaryFiles | (() => void),
+    onFilesSavedOrUndefined?: () => void,
   ) => {
+    let projectId: string | undefined;
+    let elements: readonly ExcalidrawElement[];
+    let appState: AppState;
+    let files: BinaryFiles;
+    let onFilesSaved: () => void;
+
+    if (typeof projectIdOrElements === "string") {
+      projectId = projectIdOrElements;
+      elements = elementsOrAppState as readonly ExcalidrawElement[];
+      appState = appStateOrFiles as AppState;
+      files = filesOrCallback as BinaryFiles;
+      onFilesSaved = onFilesSavedOrUndefined!;
+    } else {
+      projectId = undefined;
+      elements = projectIdOrElements;
+      appState = elementsOrAppState as AppState;
+      files = appStateOrFiles as BinaryFiles;
+      onFilesSaved = filesOrCallback as () => void;
+    }
+
     // we need to make the `isSavePaused` check synchronously (undebounced)
     if (!this.isSavePaused()) {
-      this._save(elements, appState, files, onFilesSaved);
+      this._save(projectId, elements, appState, files, onFilesSaved);
     }
   };
 
@@ -168,31 +180,36 @@ export class LocalData {
 
   static fileStorage = new LocalFileManager({
     onFileStatusChange: FileStatusStore.updateStatuses.bind(FileStatusStore),
-    getFiles(ids) {
-      return getMany(ids, filesStore).then(
+    getFiles(ids, projectId?: string) {
+      const namespacedIds = projectId
+        ? ids.map((id) => `${projectId}:${id}` as FileId)
+        : ids;
+
+      return getMany(namespacedIds, filesStore).then(
         async (filesData: (BinaryFileData | undefined)[]) => {
           const loadedFiles: BinaryFileData[] = [];
           const erroredFiles = new Map<FileId, true>();
 
-          const filesToSave: [FileId, BinaryFileData][] = [];
+          const filesToSave: [string, BinaryFileData][] = [];
 
           filesData.forEach((data, index) => {
-            const id = ids[index];
+            const originalId = ids[index];
+            const storageKey = namespacedIds[index];
             if (data) {
               const _data: BinaryFileData = {
                 ...data,
                 lastRetrieved: Date.now(),
               };
-              filesToSave.push([id, _data]);
+              filesToSave.push([storageKey as string, _data]);
               loadedFiles.push(_data);
             } else {
-              erroredFiles.set(id, true);
+              erroredFiles.set(originalId, true);
             }
           });
 
           try {
             // save loaded files back to storage with updated `lastRetrieved`
-            setMany(filesToSave, filesStore);
+            setMany(filesToSave as [IDBValidKey, BinaryFileData][], filesStore);
           } catch (error) {
             console.warn(error);
           }
@@ -201,20 +218,19 @@ export class LocalData {
         },
       );
     },
-    async saveFiles({ addedFiles }) {
+    async saveFiles({ addedFiles }, projectId?: string) {
       const savedFiles = new Map<FileId, BinaryFileData>();
       const erroredFiles = new Map<FileId, BinaryFileData>();
 
-      // before we use `storage` event synchronization, let's update the flag
-      // optimistically. Hopefully nothing fails, and an IDB read executed
-      // before an IDB write finishes will read the latest value.
-      updateBrowserStateVersion(STORAGE_KEYS.VERSION_FILES);
-
       await Promise.all(
         [...addedFiles].map(async ([id, fileData]) => {
+          const storageKey = projectId ? `${projectId}:${id}` : id;
           try {
-            await set(id, fileData, filesStore);
+            await set(storageKey, fileData, filesStore);
             savedFiles.set(id, fileData);
+            if (projectId) {
+              broadcastFileUpdate(projectId, id);
+            }
           } catch (error: any) {
             console.error(error);
             erroredFiles.set(id, fileData);
@@ -226,6 +242,7 @@ export class LocalData {
     },
   });
 }
+
 export class LibraryIndexedDBAdapter {
   /** IndexedDB database and store name */
   private static idb_name = STORAGE_KEYS.IDB_LIBRARY;
