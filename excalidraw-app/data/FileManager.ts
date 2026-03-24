@@ -47,11 +47,17 @@ export class FileManager {
     saveFiles,
     onFileStatusChange,
   }: {
-    getFiles: (fileIds: FileId[]) => Promise<{
+    getFiles: (
+      fileIds: FileId[],
+      projectId?: string,
+    ) => Promise<{
       loadedFiles: BinaryFileData[];
       erroredFiles: Map<FileId, true>;
     }>;
-    saveFiles: (data: { addedFiles: Map<FileId, BinaryFileData> }) => Promise<{
+    saveFiles: (
+      data: { addedFiles: Map<FileId, BinaryFileData> },
+      projectId?: string,
+    ) => Promise<{
       savedFiles: Map<FileId, BinaryFileData>;
       erroredFiles: Map<FileId, BinaryFileData>;
     }>;
@@ -92,9 +98,11 @@ export class FileManager {
   saveFiles = async ({
     elements,
     files,
+    projectId,
   }: {
     elements: readonly ExcalidrawElement[];
     files: BinaryFiles;
+    projectId?: string;
   }) => {
     const addedFiles: Map<FileId, BinaryFileData> = new Map();
 
@@ -113,9 +121,10 @@ export class FileManager {
     }
 
     try {
-      const { savedFiles, erroredFiles } = await this._saveFiles({
-        addedFiles,
-      });
+      const { savedFiles, erroredFiles } = await this._saveFiles(
+        { addedFiles },
+        projectId,
+      );
 
       for (const [fileId, fileData] of savedFiles) {
         this.savedFiles.set(fileId, this.getFileVersion(fileData));
@@ -138,6 +147,7 @@ export class FileManager {
 
   getFiles = async (
     ids: FileId[],
+    projectId?: string,
   ): Promise<{
     loadedFiles: BinaryFileData[];
     erroredFiles: Map<FileId, true>;
@@ -155,7 +165,7 @@ export class FileManager {
     this._onFileStatusChange?.(ids.map((id) => [id, "loading"]));
 
     try {
-      const { loadedFiles, erroredFiles } = await this._getFiles(ids);
+      const { loadedFiles, erroredFiles } = await this._getFiles(ids, projectId);
 
       for (const file of loadedFiles) {
         this.savedFiles.set(file.id, this.getFileVersion(file));

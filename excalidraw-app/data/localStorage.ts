@@ -34,6 +34,10 @@ export const importUsernameFromLocalStorage = (): string | null => {
   return null;
 };
 
+/**
+ * @legacy Used only during migration from localStorage to IndexedDB.
+ * New code paths should use SceneStore.loadScene(projectId) instead.
+ */
 export const importFromLocalStorage = () => {
   let savedElements = null;
   let savedState = null;
