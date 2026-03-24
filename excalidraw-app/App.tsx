@@ -35,6 +35,7 @@ import {
 } from "@excalidraw/common";
 import polyfill from "@excalidraw/excalidraw/polyfill";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Routes, Route, useParams, useNavigate } from "react-router-dom";
 import { loadFromBlob } from "@excalidraw/excalidraw/data/blob";
 import { t } from "@excalidraw/excalidraw/i18n";
 
@@ -147,6 +148,7 @@ import "./index.scss";
 
 import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanner";
 import { AppSidebar } from "./components/AppSidebar";
+import { DashboardPlaceholder } from "./pages/DashboardPlaceholder";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -1266,6 +1268,39 @@ const ExcalidrawWrapper = () => {
   );
 };
 
+const ProjectEditorRoute = () => {
+  const { id: projectId } = useParams<{ id: string }>();
+  return (
+    <ExcalidrawAPIProvider key={projectId}>
+      <ExcalidrawWrapper />
+    </ExcalidrawAPIProvider>
+  );
+};
+
+const DashboardOrLegacyRedirect = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+
+    if (hash.startsWith("#room=") || hash.match(/^#json=/)) {
+      // Legacy collab/share links: redirect to a temporary project editor
+      // preserving the hash so initializeScene can parse it.
+      const tempId = `legacy-${Date.now()}`;
+      navigate(`/project/${tempId}${hash}`, { replace: true });
+    }
+  }, [navigate]);
+
+  // If we didn't redirect, render the dashboard placeholder
+  const hash = window.location.hash;
+  if (hash.startsWith("#room=") || hash.match(/^#json=/)) {
+    // Will redirect on next render via useEffect; render nothing meanwhile
+    return null;
+  }
+
+  return <DashboardPlaceholder />;
+};
+
 const ExcalidrawApp = () => {
   const isCloudExportWindow =
     window.location.pathname === "/excalidraw-plus-export";
@@ -1276,9 +1311,12 @@ const ExcalidrawApp = () => {
   return (
     <TopErrorBoundary>
       <Provider store={appJotaiStore}>
-        <ExcalidrawAPIProvider>
-          <ExcalidrawWrapper />
-        </ExcalidrawAPIProvider>
+        <Routes>
+          <Route path="/" element={<DashboardOrLegacyRedirect />} />
+          <Route path="/project/:id" element={<ProjectEditorRoute />} />
+          <Route path="/join" element={<DashboardPlaceholder />} />
+          <Route path="*" element={<DashboardOrLegacyRedirect />} />
+        </Routes>
       </Provider>
     </TopErrorBoundary>
   );
