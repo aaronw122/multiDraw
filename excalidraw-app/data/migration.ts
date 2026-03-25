@@ -1,10 +1,10 @@
 import { createStore, get, set, del, keys } from "idb-keyval";
 
+import type { AppState, BinaryFileData } from "@excalidraw/excalidraw/types";
+
 import { importFromLocalStorage } from "./localStorage";
 import { saveScene } from "./SceneStore";
 import { createProject } from "./ProjectStore";
-
-import type { AppState, BinaryFileData } from "@excalidraw/excalidraw/types";
 
 const MIGRATION_FLAG = "excalibur-migrated";
 const LEGACY_CLEANUP_FLAG = "excalibur-legacy-files-cleaned";
@@ -35,11 +35,7 @@ export const runMigration = async (): Promise<string | null> => {
 
   const project = await createProject("My Drawing");
 
-  await saveScene(
-    project.id,
-    elements,
-    (appState ?? {}) as AppState,
-  );
+  await saveScene(project.id, elements, (appState ?? {}) as AppState);
 
   await rekeyFiles(project.id);
 

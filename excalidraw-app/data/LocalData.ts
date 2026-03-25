@@ -11,15 +11,7 @@
  */
 
 import { debounce } from "@excalidraw/common";
-import {
-  createStore,
-  del,
-  getMany,
-  set,
-  setMany,
-  get,
-  keys,
-} from "idb-keyval";
+import { createStore, del, getMany, set, setMany, get, keys } from "idb-keyval";
 
 import { atom } from "excalidraw-app/app-jotai";
 

@@ -106,7 +106,6 @@ export const findProjectByCollabRoomId = async (
   }
   const projects = await getMany<ProjectMetadata>(allKeys, projectStore);
   return projects.find(
-    (p): p is ProjectMetadata =>
-      p != null && p.collabRoomId === collabRoomId,
+    (p): p is ProjectMetadata => p != null && p.collabRoomId === collabRoomId,
   );
 };

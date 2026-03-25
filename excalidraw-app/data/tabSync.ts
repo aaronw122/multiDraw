@@ -60,7 +60,7 @@ const getChannel = (): BroadcastChannel => {
 };
 
 let dirtyProjectId: string | null = null;
-let dirtyFiles = new Set<string>();
+const dirtyFiles = new Set<string>();
 let currentProjectId: string | null = null;
 let onSceneDirty: (() => void) | null = null;
 
@@ -83,7 +83,10 @@ export const initTabSync = (
   ch.onmessage = handleMessage;
 
   const handleVisibility = () => {
-    if (document.visibilityState === "visible" && dirtyProjectId === projectId) {
+    if (
+      document.visibilityState === "visible" &&
+      dirtyProjectId === projectId
+    ) {
       dirtyProjectId = null;
       dirtyFiles.clear();
       onSceneDirty?.();
@@ -144,7 +147,7 @@ export const broadcastSceneUpdate = (
       type: "scene-update",
       projectId,
       version,
-    } satisfies SyncMessage);
+    } as SyncMessage);
   } catch {
     // BroadcastChannel may not be available in all environments
   }
@@ -162,7 +165,7 @@ export const broadcastFileUpdate = (
       type: "file-update",
       projectId,
       fileId,
-    } satisfies SyncMessage);
+    } as SyncMessage);
   } catch {
     // BroadcastChannel may not be available in all environments
   }

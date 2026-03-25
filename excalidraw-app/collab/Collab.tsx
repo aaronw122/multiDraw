@@ -6,7 +6,7 @@ import {
   reconcileElements,
 } from "@excalidraw/excalidraw";
 import { ErrorDialog } from "@excalidraw/excalidraw/components/ErrorDialog";
-import { APP_NAME, cloneJSON, EVENT, toBrandedType } from "@excalidraw/common";
+import { cloneJSON, EVENT, toBrandedType } from "@excalidraw/common";
 import {
   IDLE_THRESHOLD,
   ACTIVE_THRESHOLD,
@@ -496,9 +496,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       ({ roomId, roomKey } = await generateCollaborationLinkData());
       const collabLink = getCollaborationLink({ roomId, roomKey });
       const collabUrl = new URL(collabLink);
-      this.props.navigate(
-        `${collabUrl.pathname}${collabUrl.hash}`,
-      );
+      this.props.navigate(`${collabUrl.pathname}${collabUrl.hash}`);
     }
 
     // TODO: `ImportedDataState` type here seems abused

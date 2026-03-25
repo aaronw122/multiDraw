@@ -2,10 +2,7 @@ import { createStore, get, set, del } from "idb-keyval";
 
 import { clearAppStateForLocalStorage } from "@excalidraw/excalidraw/appState";
 
-import {
-  CANVAS_SEARCH_TAB,
-  DEFAULT_SIDEBAR,
-} from "@excalidraw/common";
+import { CANVAS_SEARCH_TAB, DEFAULT_SIDEBAR } from "@excalidraw/common";
 
 import { getNonDeletedElements } from "@excalidraw/element";
 

@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   listProjects,
   createProject,
   deleteProject,
   renameProject,
 } from "../data/ProjectStore";
-import type { ProjectMetadata } from "../data/ProjectStore";
+
 import { STORAGE_KEYS } from "../app_constants";
+
 import "./Dashboard.css";
+
+import type { ProjectMetadata } from "../data/ProjectStore";
 
 const LAST_PROJECT_KEY = "excalibur-last-project-id";
 
@@ -277,9 +281,7 @@ export const Dashboard = () => {
               <circle cx="11" cy="11" r="2" />
             </svg>
           </div>
-          <h2 className="exc-dashboard__empty-title">
-            No drawings yet
-          </h2>
+          <h2 className="exc-dashboard__empty-title">No drawings yet</h2>
           <p className="exc-dashboard__empty-subtitle">
             Create your first drawing to get started
           </p>
@@ -333,8 +335,7 @@ export const Dashboard = () => {
       {lastProject && (
         <div className="exc-dashboard__resume">
           <span className="exc-dashboard__resume-text">
-            Continue where you left off:{" "}
-            <strong>{lastProject.name}</strong>
+            Continue where you left off: <strong>{lastProject.name}</strong>
           </span>
           <button
             type="button"
@@ -455,8 +456,8 @@ export const Dashboard = () => {
           >
             <h2 className="exc-dashboard__dialog-title">Delete drawing?</h2>
             <p className="exc-dashboard__dialog-message">
-              "{deletingProject.name}" will be permanently
-              deleted. This action cannot be undone.
+              "{deletingProject.name}" will be permanently deleted. This action
+              cannot be undone.
             </p>
             <div className="exc-dashboard__dialog-actions">
               <button

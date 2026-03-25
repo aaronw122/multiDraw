@@ -165,7 +165,10 @@ export class FileManager {
     this._onFileStatusChange?.(ids.map((id) => [id, "loading"]));
 
     try {
-      const { loadedFiles, erroredFiles } = await this._getFiles(ids, projectId);
+      const { loadedFiles, erroredFiles } = await this._getFiles(
+        ids,
+        projectId,
+      );
 
       for (const file of loadedFiles) {
         this.savedFiles.set(file.id, this.getFileVersion(file));

@@ -21,7 +21,6 @@ import { openConfirmModal } from "@excalidraw/excalidraw/components/OverwriteCon
 import { ShareableLinkDialog } from "@excalidraw/excalidraw/components/ShareableLinkDialog";
 import Trans from "@excalidraw/excalidraw/components/Trans";
 import {
-  APP_NAME,
   EVENT,
   THEME,
   VERSION_TIMEOUT,
@@ -36,7 +35,7 @@ import {
 } from "@excalidraw/common";
 import polyfill from "@excalidraw/excalidraw/polyfill";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Routes, Route, useParams, useNavigate, Link } from "react-router-dom";
+import { Routes, Route, useParams, useNavigate } from "react-router-dom";
 import { loadFromBlob } from "@excalidraw/excalidraw/data/blob";
 import { t } from "@excalidraw/excalidraw/i18n";
 
@@ -44,9 +43,7 @@ import {
   GithubIcon,
   XBrandIcon,
   DiscordIcon,
-  ExcalLogo,
   usersIcon,
-  exportToPlus,
   share,
   youtubeIcon,
 } from "@excalidraw/excalidraw/components/icons";
@@ -93,7 +90,6 @@ import {
 } from "./app-jotai";
 import {
   FIREBASE_STORAGE_PREFIXES,
-  isExcalidrawPlusSignedUser,
   STORAGE_KEYS,
   SYNC_BROWSER_TABS_TIMEOUT,
 } from "./app_constants";
@@ -105,10 +101,6 @@ import Collab, {
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
-import {
-  ExportToExcalidrawPlus,
-  exportToExcalidrawPlus,
-} from "./components/ExportToExcalidrawPlus";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
 import {
@@ -150,7 +142,6 @@ import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 
 import "./index.scss";
 
-import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanner";
 import { AppSidebar } from "./components/AppSidebar";
 import { Dashboard } from "./pages/Dashboard";
 import JoinCollabRoute from "./pages/JoinCollabRoute";
@@ -304,9 +295,7 @@ const initializeScene = async (opts: {
       scene.scrollToContent = true;
       if (!roomLinkData) {
         // Strip the hash but stay in the editor if we're inside a project
-        const cleanUrl = opts.projectId
-          ? `/project/${opts.projectId}`
-          : "/";
+        const cleanUrl = opts.projectId ? `/project/${opts.projectId}` : "/";
         opts.navigate(cleanUrl, { replace: true });
       }
     } else {
@@ -324,15 +313,11 @@ const initializeScene = async (opts: {
       }
 
       roomLinkData = null;
-      const fallbackUrl = opts.projectId
-        ? `/project/${opts.projectId}`
-        : "/";
+      const fallbackUrl = opts.projectId ? `/project/${opts.projectId}` : "/";
       opts.navigate(fallbackUrl, { replace: true });
     }
   } else if (externalUrlMatch) {
-    const cleanUrl = opts.projectId
-      ? `/project/${opts.projectId}`
-      : "/";
+    const cleanUrl = opts.projectId ? `/project/${opts.projectId}` : "/";
     opts.navigate(cleanUrl, { replace: true });
 
     const url = externalUrlMatch[1];
@@ -696,7 +681,15 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
         false,
       );
     };
-  }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode, loadImages, projectId, navigate]);
+  }, [
+    isCollabDisabled,
+    collabAPI,
+    excalidrawAPI,
+    setLangCode,
+    loadImages,
+    projectId,
+    navigate,
+  ]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -731,9 +724,7 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
       const elements = excalidrawAPI
         .getSceneElementsIncludingDeleted()
         .map((element) => {
-          if (
-            LocalData.fileStorage.shouldUpdateImageElementStatus(element)
-          ) {
+          if (LocalData.fileStorage.shouldUpdateImageElementStatus(element)) {
             const newElement = newElementWith(element, { status: "saved" });
             if (newElement !== element) {
               didChange = true;
@@ -801,13 +792,7 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
     // not to evaludate the nested expression every time
     if (!LocalData.isSavePaused()) {
       const saveArgs: Parameters<typeof LocalData.save> = projectId
-        ? [
-            projectId,
-            elements,
-            appState,
-            files,
-            onFilesSavedCallback,
-          ]
+        ? [projectId, elements, appState, files, onFilesSavedCallback]
         : [elements, appState, files, onFilesSavedCallback];
       LocalData.save(...saveArgs);
 
@@ -966,45 +951,6 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
     );
   }
 
-  const ExcalidrawPlusCommand = {
-    label: "Excalidraw+",
-    category: DEFAULT_CATEGORIES.links,
-    predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: ["plus", "cloud", "server"],
-    perform: () => {
-      window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_LP
-        }/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
-        "_blank",
-      );
-    },
-  };
-  const ExcalidrawPlusAppCommand = {
-    label: "Sign up",
-    category: DEFAULT_CATEGORIES.links,
-    predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: [
-      "excalidraw",
-      "plus",
-      "cloud",
-      "server",
-      "signin",
-      "login",
-      "signup",
-    ],
-    perform: () => {
-      window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_APP
-        }?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
-        "_blank",
-      );
-    },
-  };
-
   return (
     <div
       style={{ height: "100%" }}
@@ -1012,34 +958,6 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
         "is-collaborating": isCollaborating,
       })}
     >
-      {projectId && (
-        <Link
-          to="/"
-          onClick={() => LocalData.flushSave()}
-          className="back-to-dashboard"
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            zIndex: 5,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 12px",
-            borderRadius: 8,
-            background: "var(--color-surface-mid)",
-            color: "var(--color-on-surface)",
-            textDecoration: "none",
-            fontSize: 13,
-            fontWeight: 500,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-            border: "1px solid var(--color-border-outline-variant)",
-          }}
-          title="Back to Dashboard"
-        >
-          ← Dashboard
-        </Link>
-      )}
       <Excalidraw
         onChange={onChange}
         onExport={onExport}
@@ -1051,30 +969,6 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
             toggleTheme: true,
             export: {
               onExportToBackend,
-              renderCustomUI: excalidrawAPI
-                ? (elements, appState, files) => {
-                    return (
-                      <ExportToExcalidrawPlus
-                        elements={elements}
-                        appState={appState}
-                        files={files}
-                        name={excalidrawAPI.getName()}
-                        onError={(error) => {
-                          excalidrawAPI?.updateScene({
-                            appState: {
-                              errorMessage: error.message,
-                            },
-                          });
-                        }}
-                        onSuccess={() => {
-                          excalidrawAPI.updateScene({
-                            appState: { openDialog: null },
-                          });
-                        }}
-                      />
-                    );
-                  }
-                : undefined,
             },
           },
         }}
@@ -1084,6 +978,36 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
         handleKeyboardGlobally={true}
         autoFocus={true}
         theme={editorTheme}
+        renderTopLeftUI={() => {
+          if (!projectId) {
+            return null;
+          }
+          return (
+            <button
+              type="button"
+              className="dropdown-menu-button main-menu-trigger"
+              title="Back to Dashboard"
+              onClick={() => {
+                LocalData.flushSave();
+                navigate("/");
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ display: "block" }}
+              >
+                <path d="M15 10H5M5 10L10 5M5 10L10 15" />
+              </svg>
+            </button>
+          );
+        }}
         renderTopRightUI={(isMobile) => {
           if (isMobile || !collabAPI || isCollabDisabled) {
             return null;
@@ -1091,12 +1015,6 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
 
           return (
             <div className="excalidraw-ui-top-right">
-              {excalidrawAPI?.getEditorInterface().formFactor === "desktop" && (
-                <ExcalidrawPlusPromoBanner
-                  isSignedIn={isExcalidrawPlusSignedUser}
-                />
-              )}
-
               {collabError.message && <CollabError collabError={collabError} />}
               <LiveCollaborationTrigger
                 isCollaborating={isCollaborating}
@@ -1130,22 +1048,6 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
-          {excalidrawAPI && (
-            <OverwriteConfirmDialog.Action
-              title={t("overwriteConfirm.action.excalidrawPlus.title")}
-              actionLabel={t("overwriteConfirm.action.excalidrawPlus.button")}
-              onClick={() => {
-                exportToExcalidrawPlus(
-                  excalidrawAPI.getSceneElements(),
-                  excalidrawAPI.getAppState(),
-                  excalidrawAPI.getFiles(),
-                  excalidrawAPI.getName(),
-                );
-              }}
-            >
-              {t("overwriteConfirm.action.excalidrawPlus.description")}
-            </OverwriteConfirmDialog.Action>
-          )}
         </OverwriteConfirmDialog>
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
         {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
@@ -1337,32 +1239,6 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
                   "_blank",
                   "noopener noreferrer",
                 );
-              },
-            },
-            ...(isExcalidrawPlusSignedUser
-              ? [
-                  {
-                    ...ExcalidrawPlusAppCommand,
-                    label: "Sign in / Go to Excalidraw+",
-                  },
-                ]
-              : [ExcalidrawPlusCommand, ExcalidrawPlusAppCommand]),
-
-            {
-              label: t("overwriteConfirm.action.excalidrawPlus.button"),
-              category: DEFAULT_CATEGORIES.export,
-              icon: exportToPlus,
-              predicate: true,
-              keywords: ["plus", "export", "save", "backup"],
-              perform: () => {
-                if (excalidrawAPI) {
-                  exportToExcalidrawPlus(
-                    excalidrawAPI.getSceneElements(),
-                    excalidrawAPI.getAppState(),
-                    excalidrawAPI.getFiles(),
-                    excalidrawAPI.getName(),
-                  );
-                }
               },
             },
             {
