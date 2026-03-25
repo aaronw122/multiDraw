@@ -7,6 +7,7 @@ import {
   deleteProject,
   renameProject,
 } from "../data/ProjectStore";
+import { exportAllProjects } from "../data/exportAll";
 
 import { STORAGE_KEYS } from "../app_constants";
 
@@ -109,6 +110,7 @@ export const Dashboard = () => {
   const [editingName, setEditingName] = useState("");
   const [deletingProject, setDeletingProject] =
     useState<ProjectMetadata | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const editInputRef = useRef<HTMLInputElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 200);
@@ -320,6 +322,21 @@ export const Dashboard = () => {
               <option value="name">Name</option>
               <option value="created">Created</option>
             </select>
+            <button
+              type="button"
+              className="exc-dashboard__btn-secondary"
+              disabled={exporting}
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  await exportAllProjects();
+                } finally {
+                  setExporting(false);
+                }
+              }}
+            >
+              {exporting ? "Exporting..." : "Export All"}
+            </button>
             <button
               type="button"
               className="exc-dashboard__btn-primary"

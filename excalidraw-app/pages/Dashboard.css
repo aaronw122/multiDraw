@@ -144,6 +144,29 @@
   background: var(--exc-btn-primary-hover);
 }
 
+/* Secondary button */
+.exc-dashboard__btn-secondary {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--exc-btn-secondary-border);
+  background: var(--exc-btn-secondary-bg);
+  color: var(--exc-text);
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.exc-dashboard__btn-secondary:hover {
+  background: var(--exc-btn-secondary-hover);
+}
+
+.exc-dashboard__btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Resume banner */
 .exc-dashboard__resume {
   max-width: 1200px;
