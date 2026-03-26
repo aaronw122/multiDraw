@@ -86,6 +86,7 @@ import {
   saveUsernameToLocalStorage,
 } from "../data/localStorage";
 import { resetBrowserStateVersions } from "../data/tabSync";
+import { updateProject } from "../data/ProjectStore";
 
 import { collabErrorIndicatorAtom } from "./CollabError";
 import Portal from "./Portal";
@@ -497,6 +498,15 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       const collabLink = getCollaborationLink({ roomId, roomKey });
       const collabUrl = new URL(collabLink);
       this.props.navigate(`${collabUrl.pathname}${collabUrl.hash}`);
+
+      // Tag the host's project with the collabRoomId so that joining the
+      // same room from another tab (or browser) finds the existing project
+      // instead of creating a duplicate.
+      if (this.props.projectId) {
+        updateProject(this.props.projectId, { collabRoomId: roomId }).catch(
+          (err) => console.error("Failed to save collabRoomId:", err),
+        );
+      }
     }
 
     // TODO: `ImportedDataState` type here seems abused
