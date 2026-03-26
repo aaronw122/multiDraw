@@ -20,7 +20,7 @@ export const exportAllProjects = async (): Promise<void> => {
   for (const project of projects) {
     const scene = await loadScene(project.id);
 
-    let baseName = sanitizeFilename(project.name);
+    const baseName = sanitizeFilename(project.name);
     let fileName = baseName;
     let counter = 1;
     while (usedNames.has(fileName)) {
@@ -32,15 +32,12 @@ export const exportAllProjects = async (): Promise<void> => {
     const excalidrawData = {
       type: "excalidraw",
       version: 2,
-      source: "excalibur",
+      source: "multidraw",
       elements: scene?.elements ?? [],
       appState: scene?.appState ?? {},
     };
 
-    zip.file(
-      `${fileName}.excalidraw`,
-      JSON.stringify(excalidrawData, null, 2),
-    );
+    zip.file(`${fileName}.excalidraw`, JSON.stringify(excalidrawData, null, 2));
   }
 
   const blob = await zip.generateAsync({ type: "blob" });
@@ -54,7 +51,7 @@ export const exportAllProjects = async (): Promise<void> => {
 
   const anchor = document.createElement("a");
   anchor.href = URL.createObjectURL(blob);
-  anchor.download = `Excalibur-Export-${datePart}.zip`;
+  anchor.download = `Multidraw-Export-${datePart}.zip`;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);

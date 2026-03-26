@@ -6,8 +6,8 @@ import { importFromLocalStorage } from "./localStorage";
 import { saveScene } from "./SceneStore";
 import { createProject } from "./ProjectStore";
 
-const MIGRATION_FLAG = "excalibur-migrated";
-const LEGACY_CLEANUP_FLAG = "excalibur-legacy-files-cleaned";
+const MIGRATION_FLAG = "multidraw-migrated";
+const LEGACY_CLEANUP_FLAG = "multidraw-legacy-files-cleaned";
 
 const filesStore = createStore("files-db", "files-store");
 

@@ -18,7 +18,7 @@ export interface StoredScene {
   version: number;
 }
 
-const sceneStore = createStore("excalibur-scenes-db", "scenes-store");
+const sceneStore = createStore("multidraw-scenes-db", "scenes-store");
 
 export const loadScene = async (
   projectId: string,

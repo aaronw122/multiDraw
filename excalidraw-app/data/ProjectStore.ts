@@ -10,20 +10,20 @@ export interface ProjectMetadata {
   collabRoomId?: string;
 }
 
-const projectStore = createStore("excalibur-projects-db", "projects-store");
+const projectStore = createStore("multidraw-projects-db", "projects-store");
 
 /**
  * Scene data store — stores elements + appState per project.
  * Keyed by project ID.
  */
-const sceneStore = createStore("excalibur-scenes-db", "scenes-store");
+const sceneStore = createStore("multidraw-scenes-db", "scenes-store");
 
 /**
  * Files store — stores binary file data per project.
  * Keyed by `${projectId}:${fileId}`.
  */
 const projectFilesStore = createStore(
-  "excalibur-project-files-db",
+  "multidraw-project-files-db",
   "project-files-store",
 );
 

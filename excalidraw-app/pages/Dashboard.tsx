@@ -15,7 +15,7 @@ import "./Dashboard.css";
 
 import type { ProjectMetadata } from "../data/ProjectStore";
 
-const LAST_PROJECT_KEY = "excalibur-last-project-id";
+const LAST_PROJECT_KEY = "multidraw-last-project-id";
 
 type SortMode = "recent" | "name" | "created";
 
@@ -249,7 +249,7 @@ export const Dashboard = () => {
       <div className={`exc-dashboard exc-dashboard--${theme}`}>
         <div className="exc-dashboard__header">
           <div className="exc-dashboard__title-row">
-            <h1 className="exc-dashboard__title">Excalibur</h1>
+            <h1 className="exc-dashboard__title">Multidraw</h1>
           </div>
         </div>
       </div>
@@ -262,7 +262,7 @@ export const Dashboard = () => {
       <div className={`exc-dashboard exc-dashboard--${theme}`}>
         <div className="exc-dashboard__header">
           <div className="exc-dashboard__title-row">
-            <h1 className="exc-dashboard__title">Excalibur</h1>
+            <h1 className="exc-dashboard__title">Multidraw</h1>
           </div>
         </div>
         <div className="exc-dashboard__empty">
@@ -304,7 +304,7 @@ export const Dashboard = () => {
       {/* Header */}
       <div className="exc-dashboard__header">
         <div className="exc-dashboard__title-row">
-          <h1 className="exc-dashboard__title">Excalibur</h1>
+          <h1 className="exc-dashboard__title">Multidraw</h1>
           <div className="exc-dashboard__controls">
             <input
               type="text"

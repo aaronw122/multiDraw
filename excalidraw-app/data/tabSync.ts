@@ -44,7 +44,7 @@ export const resetBrowserStateVersions = () => {
 // BroadcastChannel-based tab sync
 // ---------------------------------------------------------------------------
 
-const CHANNEL_NAME = "excalibur-sync";
+const CHANNEL_NAME = "multidraw-sync";
 
 type SyncMessage =
   | { type: "scene-update"; projectId: string; version: number }
