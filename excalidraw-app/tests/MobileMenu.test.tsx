@@ -5,8 +5,34 @@ import {
   restoreOriginalGetBoundingClientRect,
 } from "@excalidraw/excalidraw/tests/test-utils";
 import { MemoryRouter } from "react-router-dom";
+import { vi } from "vitest";
 
 import ExcalidrawApp from "../App";
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useParams: () => ({ id: "test" }),
+  };
+});
+
+vi.mock("../../excalidraw-app/data/ProjectStore", () => ({
+  listProjects: async () => [],
+  createProject: async (name: string) => ({
+    id: "test",
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  }),
+  updateProject: async () => {},
+  deleteProject: async () => {},
+  renameProject: async () => {},
+  getProject: async () => null,
+}));
 
 describe("Test MobileMenu", () => {
   const { h } = window;
