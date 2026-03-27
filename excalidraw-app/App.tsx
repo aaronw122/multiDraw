@@ -88,11 +88,7 @@ import {
   appJotaiStore,
   currentProjectIdAtom,
 } from "./app-jotai";
-import {
-  FIREBASE_STORAGE_PREFIXES,
-  STORAGE_KEYS,
-  SYNC_BROWSER_TABS_TIMEOUT,
-} from "./app_constants";
+import { STORAGE_KEYS, SYNC_BROWSER_TABS_TIMEOUT } from "./app_constants";
 import Collab, {
   collabAPIAtom,
   isCollaboratingAtom,
@@ -119,7 +115,7 @@ import {
 import { loadScene } from "./data/SceneStore";
 import { createProject, updateProject } from "./data/ProjectStore";
 
-import { loadFilesFromFirebase } from "./data/firebase";
+import { loadFilesFromBackend } from "./data/backendFiles";
 import {
   LibraryIndexedDBAdapter,
   LibraryLocalStorageMigrationAdapter,
@@ -267,6 +263,8 @@ const initializeScene = async (opts: {
       !scene.elements.length ||
       // don't prompt for collab scenes because we don't override local storage
       roomLinkData ||
+      // don't prompt in multi-project mode — each project is isolated
+      opts.projectId ||
       // otherwise, prompt whether user wants to override current scene
       (await openConfirmModal(shareableLinkConfirmDialog))
     ) {
@@ -326,6 +324,7 @@ const initializeScene = async (opts: {
       const data = await loadFromBlob(await request.blob(), null, null);
       if (
         !scene.elements.length ||
+        opts.projectId ||
         (await openConfirmModal(shareableLinkConfirmDialog))
       ) {
         return { scene: data, isExternalScene };
@@ -439,6 +438,22 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
   });
   const collabError = useAtomValue(collabErrorIndicatorAtom);
 
+  // Auto-open export dialog when navigated from dashboard with query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("export") === "true" && excalidrawAPI) {
+      excalidrawAPI.updateScene({
+        appState: { openDialog: { name: "imageExport" } },
+      });
+    }
+    // Clean up query params without a page reload
+    if (params.get("export")) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("export");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [excalidrawAPI]);
+
   useHandleLibrary({
     excalidrawAPI,
     adapter: LibraryIndexedDBAdapter,
@@ -504,24 +519,24 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
               fileIds.map((id) => [id, "loading"]),
             );
           }
-          loadFilesFromFirebase(
-            `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
-            data.key,
-            fileIds,
-          ).then(({ loadedFiles, erroredFiles }) => {
-            excalidrawAPI.addFiles(loadedFiles);
-            updateStaleImageStatuses({
-              excalidrawAPI,
-              erroredFiles,
-              elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-            });
-            FileStatusStore.updateStatuses([
-              ...loadedFiles.map((f) => [f.id, "loaded"] as [FileId, "loaded"]),
-              ...[...erroredFiles.keys()].map(
-                (id) => [id, "error"] as [FileId, "error"],
-              ),
-            ]);
-          });
+          loadFilesFromBackend(data.id, data.key, fileIds).then(
+            ({ loadedFiles, erroredFiles }) => {
+              excalidrawAPI.addFiles(loadedFiles);
+              updateStaleImageStatuses({
+                excalidrawAPI,
+                erroredFiles,
+                elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+              });
+              FileStatusStore.updateStatuses([
+                ...loadedFiles.map(
+                  (f) => [f.id, "loaded"] as [FileId, "loaded"],
+                ),
+                ...[...erroredFiles.keys()].map(
+                  (id) => [id, "error"] as [FileId, "error"],
+                ),
+              ]);
+            },
+          );
         } else if (isInitialLoad) {
           if (fileIds.length) {
             LocalData.fileStorage
