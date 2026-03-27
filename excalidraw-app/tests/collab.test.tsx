@@ -7,6 +7,7 @@ import { syncInvalidIndices } from "@excalidraw/element";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { act, render, waitFor } from "@excalidraw/excalidraw/tests/test-utils";
 import { vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { StoreIncrement } from "@excalidraw/element";
 
@@ -49,6 +50,31 @@ vi.mock("../../excalidraw-app/data/firebase.ts", () => {
   };
 });
 
+vi.mock("../../excalidraw-app/data/ProjectStore", () => ({
+  listProjects: async () => [],
+  createProject: async (name: string) => ({
+    id: "test",
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  }),
+  updateProject: async () => {},
+  deleteProject: async () => {},
+  renameProject: async () => {},
+  getProject: async () => null,
+}));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useParams: () => ({ id: "test" }),
+  };
+});
+
 vi.mock("socket.io-client", () => {
   return {
     default: () => {
@@ -73,7 +99,11 @@ describe("collaboration", () => {
     const durableIncrements: DurableIncrement[] = [];
     const ephemeralIncrements: EphemeralIncrement[] = [];
 
-    await render(<ExcalidrawApp />);
+    await render(
+      <MemoryRouter initialEntries={["/project/test"]}>
+        <ExcalidrawApp />
+      </MemoryRouter>,
+    );
 
     h.store.onStoreIncrementEmitter.on((increment) => {
       if (StoreIncrement.isDurable(increment)) {
@@ -143,7 +173,11 @@ describe("collaboration", () => {
   });
 
   it("should allow to undo / redo even on force-deleted elements", async () => {
-    await render(<ExcalidrawApp />);
+    await render(
+      <MemoryRouter initialEntries={["/project/test"]}>
+        <ExcalidrawApp />
+      </MemoryRouter>,
+    );
     const rect1Props = {
       type: "rectangle",
       id: "A",

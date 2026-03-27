@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { FilledButton } from "@excalidraw/excalidraw/components/FilledButton";
+
+import {
+  playerPlayIcon,
+  LinkIcon,
+  copyIcon,
+} from "@excalidraw/excalidraw/components/icons";
+
+import type { BinaryFiles } from "@excalidraw/excalidraw/types";
+
 import {
   listProjects,
   createProject,
@@ -8,8 +18,12 @@ import {
   renameProject,
 } from "../data/ProjectStore";
 import { exportAllProjects } from "../data/exportAll";
+import { loadScene } from "../data/SceneStore";
+import { exportToBackend } from "../data/index";
 
 import { STORAGE_KEYS } from "../app_constants";
+
+import "../share/ShareDialog.scss";
 
 import "./Dashboard.css";
 
@@ -98,6 +112,194 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
+const DashboardShareDialog = ({
+  project,
+  onClose,
+  navigate,
+}: {
+  project: ProjectMetadata;
+  onClose: () => void;
+  navigate: (to: string) => void;
+}) => {
+  const [shareState, setShareState] = useState<
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "error"; message: string }
+    | { status: "success"; url: string }
+  >({ status: "idle" });
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
+
+  const handleStartCollab = () => {
+    localStorage.setItem(LAST_PROJECT_KEY, project.id);
+    navigate(`/project/${project.id}#room`);
+  };
+
+  const handleExportToLink = async () => {
+    setShareState({ status: "loading" });
+    try {
+      const stored = await loadScene(project.id);
+      if (!stored || !stored.elements.length) {
+        setShareState({
+          status: "error",
+          message: "This drawing is empty — nothing to share.",
+        });
+        return;
+      }
+
+      const files: BinaryFiles = {};
+      const result = await exportToBackend(
+        stored.elements,
+        stored.appState,
+        files,
+      );
+
+      if (result.url) {
+        setShareState({ status: "success", url: result.url });
+      } else {
+        setShareState({
+          status: "error",
+          message: result.errorMessage || "Failed to create shareable link.",
+        });
+      }
+    } catch (err: any) {
+      setShareState({
+        status: "error",
+        message: err.message || "Failed to create shareable link.",
+      });
+    }
+  };
+
+  const handleCopy = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyStatus("copied");
+      setTimeout(() => setCopyStatus("idle"), 2000);
+    } catch {
+      // Fallback
+      const input = document.createElement("input");
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setCopyStatus("copied");
+      setTimeout(() => setCopyStatus("idle"), 2000);
+    }
+  };
+
+  return (
+    <div className="exc-dashboard__overlay" onClick={onClose}>
+      <div
+        className="exc-dashboard__dialog exc-dashboard__dialog--share excalidraw"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          type="button"
+          className="exc-dashboard__dialog-close"
+          onClick={onClose}
+          title="Close"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="ShareDialog">
+          {/* Live collaboration */}
+          <div className="ShareDialog__picker__header">Live collaboration</div>
+          <div className="ShareDialog__picker__description">
+            <div style={{ marginBottom: "1em" }}>
+              Invite people to collaborate on your drawing.
+            </div>
+            Don&apos;t worry, the session is end-to-end encrypted, and fully
+            private. Not even our server can see what you draw.
+          </div>
+          <div className="ShareDialog__picker__button">
+            <FilledButton
+              size="large"
+              label="Start session"
+              icon={playerPlayIcon}
+              onClick={handleStartCollab}
+            />
+          </div>
+
+          <div className="ShareDialog__separator">
+            <span>Or</span>
+          </div>
+
+          {/* Shareable link */}
+          <div className="ShareDialog__picker__header">Shareable link</div>
+          <div className="ShareDialog__picker__description">
+            Export as a read-only link.
+          </div>
+
+          <div className="ShareDialog__picker__button">
+            {shareState.status === "idle" && (
+              <FilledButton
+                size="large"
+                label="Export to Link"
+                icon={LinkIcon}
+                onClick={handleExportToLink}
+              />
+            )}
+
+            {shareState.status === "loading" && (
+              <FilledButton
+                size="large"
+                label="Creating link..."
+                icon={LinkIcon}
+                status="loading"
+              />
+            )}
+
+            {shareState.status === "error" && (
+              <div className="exc-dashboard__share-error">
+                <p>{shareState.message}</p>
+                <FilledButton
+                  size="large"
+                  variant="outlined"
+                  label="Try again"
+                  onClick={() => setShareState({ status: "idle" })}
+                />
+              </div>
+            )}
+
+            {shareState.status === "success" && (
+              <div className="exc-dashboard__share-link-row">
+                <input
+                  type="text"
+                  className="exc-dashboard__share-link-input"
+                  value={shareState.url}
+                  readOnly
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <FilledButton
+                  size="large"
+                  label={copyStatus === "copied" ? "Copied!" : "Copy"}
+                  icon={copyIcon}
+                  status={copyStatus === "copied" ? "success" : null}
+                  onClick={() => handleCopy(shareState.url)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Dashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -111,8 +313,13 @@ export const Dashboard = () => {
   const [deletingProject, setDeletingProject] =
     useState<ProjectMetadata | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [sharingProject, setSharingProject] = useState<ProjectMetadata | null>(
+    null,
+  );
 
   const editInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 200);
 
   // Load projects on mount
@@ -136,12 +343,21 @@ export const Dashboard = () => {
     }
   }, [editingId]);
 
-  // Resume banner — find last opened project
+  // Close menu on click outside
+  useEffect(() => {
+    if (!openMenuId) {
+      return;
+    }
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenuId]);
+
   const lastProjectId = localStorage.getItem(LAST_PROJECT_KEY);
-  const lastProject = useMemo(
-    () => projects.find((p) => p.id === lastProjectId),
-    [projects, lastProjectId],
-  );
 
   // Filter and sort
   const filteredProjects = useMemo(() => {
@@ -239,7 +455,35 @@ export const Dashboard = () => {
   const handleRequestDelete = useCallback(
     (e: React.MouseEvent, project: ProjectMetadata) => {
       e.stopPropagation();
+      setOpenMenuId(null);
       setDeletingProject(project);
+    },
+    [],
+  );
+
+  const handleShareProject = useCallback(
+    (e: React.MouseEvent, project: ProjectMetadata) => {
+      e.stopPropagation();
+      setOpenMenuId(null);
+      setSharingProject(project);
+    },
+    [],
+  );
+
+  const handleExportProject = useCallback(
+    (e: React.MouseEvent, projectId: string) => {
+      e.stopPropagation();
+      setOpenMenuId(null);
+      localStorage.setItem(LAST_PROJECT_KEY, projectId);
+      navigate(`/project/${projectId}?export=true`);
+    },
+    [navigate],
+  );
+
+  const handleToggleMenu = useCallback(
+    (e: React.MouseEvent, projectId: string) => {
+      e.stopPropagation();
+      setOpenMenuId((prev) => (prev === projectId ? null : projectId));
     },
     [],
   );
@@ -348,22 +592,6 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* Resume banner */}
-      {lastProject && (
-        <div className="exc-dashboard__resume">
-          <span className="exc-dashboard__resume-text">
-            Continue where you left off: <strong>{lastProject.name}</strong>
-          </span>
-          <button
-            type="button"
-            className="exc-dashboard__resume-btn"
-            onClick={() => handleOpenProject(lastProject.id)}
-          >
-            Resume
-          </button>
-        </div>
-      )}
-
       {/* Project grid */}
       {filteredProjects.length > 0 ? (
         <div className="exc-dashboard__grid">
@@ -409,16 +637,41 @@ export const Dashboard = () => {
               </div>
               <div className="exc-dashboard__card-body">
                 {editingId === project.id ? (
-                  <input
-                    ref={editInputRef}
-                    type="text"
-                    className="exc-dashboard__card-name-input"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={handleFinishRename}
-                    onKeyDown={handleRenameKeyDown}
-                    onClick={(e) => e.stopPropagation()}
-                  />
+                  <div className="exc-dashboard__card-rename-row">
+                    <input
+                      ref={editInputRef}
+                      type="text"
+                      className="exc-dashboard__card-name-input"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={handleFinishRename}
+                      onKeyDown={handleRenameKeyDown}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <button
+                      type="button"
+                      className="exc-dashboard__card-rename-confirm"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleFinishRename();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Confirm rename"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </button>
+                  </div>
                 ) : (
                   <h3
                     className="exc-dashboard__card-name"
@@ -432,23 +685,64 @@ export const Dashboard = () => {
                   <span className="exc-dashboard__card-date">
                     {formatRelativeDate(project.updatedAt)}
                   </span>
-                  <div className="exc-dashboard__card-actions">
+                  <div className="exc-dashboard__card-menu-wrapper">
                     <button
                       type="button"
-                      className="exc-dashboard__card-action-btn"
-                      onClick={(e) => handleStartRename(e, project)}
-                      title="Rename"
+                      className="exc-dashboard__card-menu-btn"
+                      onClick={(e) => handleToggleMenu(e, project.id)}
+                      title="Options"
                     >
-                      Rename
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                      >
+                        <circle cx="8" cy="3" r="1.5" />
+                        <circle cx="8" cy="8" r="1.5" />
+                        <circle cx="8" cy="13" r="1.5" />
+                      </svg>
                     </button>
-                    <button
-                      type="button"
-                      className="exc-dashboard__card-action-btn exc-dashboard__card-action-btn--danger"
-                      onClick={(e) => handleRequestDelete(e, project)}
-                      title="Delete"
-                    >
-                      Delete
-                    </button>
+                    {openMenuId === project.id && (
+                      <div
+                        ref={menuRef}
+                        className="exc-dashboard__card-dropdown"
+                      >
+                        <button
+                          type="button"
+                          className="exc-dashboard__card-dropdown-item"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(null);
+                            handleStartRename(e, project);
+                          }}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          type="button"
+                          className="exc-dashboard__card-dropdown-item"
+                          onClick={(e) => handleShareProject(e, project)}
+                        >
+                          Share
+                        </button>
+                        <button
+                          type="button"
+                          className="exc-dashboard__card-dropdown-item"
+                          onClick={(e) => handleExportProject(e, project.id)}
+                        >
+                          Export
+                        </button>
+                        <div className="exc-dashboard__card-dropdown-divider" />
+                        <button
+                          type="button"
+                          className="exc-dashboard__card-dropdown-item exc-dashboard__card-dropdown-item--danger"
+                          onClick={(e) => handleRequestDelete(e, project)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -494,6 +788,15 @@ export const Dashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share dialog */}
+      {sharingProject && (
+        <DashboardShareDialog
+          project={sharingProject}
+          onClose={() => setSharingProject(null)}
+          navigate={navigate}
+        />
       )}
     </div>
   );

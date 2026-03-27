@@ -1,3 +1,14 @@
+@font-face {
+  font-family: "Excalifont";
+  src: url("https://excalidraw.nyc3.cdn.digitaloceanspaces.com/oss/fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2")
+      format("woff2"),
+    url("/fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2")
+      format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Dashboard styles — all classes prefixed with exc- to avoid conflicts */
 
 .exc-dashboard {
@@ -30,8 +41,6 @@
   --exc-btn-secondary-hover: #f0f0f4;
   --exc-btn-danger-bg: #ff4444;
   --exc-btn-danger-hover: #dd3333;
-  --exc-resume-bg: #eeedf7;
-  --exc-resume-border: #c5c2f0;
   --exc-thumbnail-bg: #ececf0;
   --exc-overlay-bg: rgba(0, 0, 0, 0.4);
   --exc-dialog-bg: #ffffff;
@@ -57,8 +66,6 @@
   --exc-btn-secondary-hover: #34344a;
   --exc-btn-danger-bg: #cc3333;
   --exc-btn-danger-hover: #dd4444;
-  --exc-resume-bg: #2d2b48;
-  --exc-resume-border: #44427a;
   --exc-thumbnail-bg: #34344a;
   --exc-overlay-bg: rgba(0, 0, 0, 0.6);
   --exc-dialog-bg: #2a2a3c;
@@ -78,10 +85,20 @@
 }
 
 .exc-dashboard__title {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-family: "Excalifont", "Xiaolai", cursive;
+  font-size: 2.5rem;
+  font-weight: 400;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #190064;
+  -webkit-text-stroke: 1.5px #190064;
+  paint-order: stroke fill;
+}
+
+.exc-dashboard--dark .exc-dashboard__title {
+  color: #e2dfff;
+  -webkit-text-stroke-color: #e2dfff;
 }
 
 .exc-dashboard__controls {
@@ -112,7 +129,7 @@
 }
 
 .exc-dashboard__sort {
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 1.75rem 0.5rem 0.75rem;
   font-size: 0.875rem;
   border-radius: 8px;
   border: 1px solid var(--exc-input-border);
@@ -120,6 +137,11 @@
   color: var(--exc-text);
   cursor: pointer;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2365656d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
 }
 
 .exc-dashboard__sort:focus {
@@ -167,46 +189,6 @@
   cursor: not-allowed;
 }
 
-/* Resume banner */
-.exc-dashboard__resume {
-  max-width: 1200px;
-  margin: 0 auto 1.5rem;
-  padding: 0.875rem 1.25rem;
-  border-radius: 10px;
-  border: 1px solid var(--exc-resume-border);
-  background: var(--exc-resume-bg);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.exc-dashboard__resume-text {
-  font-size: 0.9rem;
-  color: var(--exc-text);
-}
-
-.exc-dashboard__resume-text strong {
-  font-weight: 600;
-}
-
-.exc-dashboard__resume-btn {
-  padding: 0.4rem 0.875rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: 6px;
-  border: none;
-  background: var(--exc-btn-primary-bg);
-  color: var(--exc-btn-primary-text);
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-
-.exc-dashboard__resume-btn:hover {
-  background: var(--exc-btn-primary-hover);
-}
-
 /* Project grid */
 .exc-dashboard__grid {
   max-width: 1200px;
@@ -221,7 +203,6 @@
   background: var(--exc-card-bg);
   border: 1px solid var(--exc-card-border);
   border-radius: 12px;
-  overflow: hidden;
   cursor: pointer;
   box-shadow: var(--exc-card-shadow);
   transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
@@ -241,6 +222,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border-radius: 12px 12px 0 0;
 }
 
 .exc-dashboard__card-thumbnail img {
@@ -269,6 +251,32 @@
   color: var(--exc-text);
 }
 
+.exc-dashboard__card-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0.25rem;
+}
+
+.exc-dashboard__card-rename-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: none;
+  background: var(--exc-btn-primary-bg);
+  color: var(--exc-btn-primary-text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.exc-dashboard__card-rename-confirm:hover {
+  background: var(--exc-btn-primary-hover);
+}
+
 .exc-dashboard__card-name-input {
   font-size: 0.9375rem;
   font-weight: 600;
@@ -294,30 +302,73 @@
   color: var(--exc-text-secondary);
 }
 
-.exc-dashboard__card-actions {
-  display: flex;
-  gap: 0.25rem;
+.exc-dashboard__card-menu-wrapper {
+  position: relative;
 }
 
-.exc-dashboard__card-action-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  border: 1px solid transparent;
+.exc-dashboard__card-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
   background: transparent;
   color: var(--exc-text-secondary);
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
-.exc-dashboard__card-action-btn:hover {
+.exc-dashboard__card-menu-btn:hover {
   background: var(--exc-btn-secondary-hover);
   color: var(--exc-text);
 }
 
-.exc-dashboard__card-action-btn--danger:hover {
+.exc-dashboard__card-dropdown {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  min-width: 140px;
+  background: var(--exc-dialog-bg);
+  border: 1px solid var(--exc-card-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  padding: 4px;
+}
+
+.exc-dashboard__card-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  text-align: left;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--exc-text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.exc-dashboard__card-dropdown-item:hover {
+  background: var(--exc-btn-secondary-hover);
+}
+
+.exc-dashboard__card-dropdown-item--danger {
+  color: var(--exc-btn-danger-bg);
+}
+
+.exc-dashboard__card-dropdown-item--danger:hover {
   background: var(--exc-btn-danger-bg);
   color: #fff;
+}
+
+.exc-dashboard__card-dropdown-divider {
+  height: 1px;
+  background: var(--exc-card-border);
+  margin: 4px 0;
 }
 
 /* Empty state */
@@ -442,6 +493,73 @@
   background: var(--exc-btn-danger-hover);
 }
 
+/* Share dialog — uses excalidraw ShareDialog classes + FilledButton */
+.exc-dashboard__dialog--share {
+  max-width: 480px;
+  padding: 2rem;
+  position: relative;
+}
+
+.exc-dashboard__dialog-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--exc-text-secondary);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  z-index: 1;
+}
+
+.exc-dashboard__dialog-close:hover {
+  background: var(--exc-btn-secondary-hover);
+  color: var(--exc-text);
+}
+
+.exc-dashboard__share-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--exc-btn-danger-bg);
+  text-align: center;
+}
+
+.exc-dashboard__share-error p {
+  margin: 0;
+}
+
+.exc-dashboard__share-link-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.exc-dashboard__share-link-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: 8px;
+  border: 1px solid var(--exc-input-border);
+  background: var(--exc-input-bg);
+  color: var(--exc-text);
+  outline: none;
+}
+
+.exc-dashboard__share-link-input:focus {
+  border-color: var(--exc-input-focus-border);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .exc-dashboard {
@@ -468,10 +586,5 @@
   .exc-dashboard__grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
-  }
-
-  .exc-dashboard__resume {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

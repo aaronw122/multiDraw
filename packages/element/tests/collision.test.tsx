@@ -11,6 +11,21 @@ import { hitElementItself } from "../src/collision";
 
 describe("check rotated elements can be hit:", () => {
   beforeEach(async () => {
+    // reset cache
+    hitElementItself({
+      point: pointFrom<GlobalPoint>(50, 50),
+      element: API.createElement({
+        type: "rectangle",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        backgroundColor: "#ffffff",
+      }),
+      threshold: Infinity,
+      elementsMap: new Map([]),
+    });
+
     localStorage.clear();
     await render(<Excalidraw handleKeyboardGlobally={true} />);
   });
@@ -28,6 +43,7 @@ describe("check rotated elements can be hit:", () => {
         [-4, -302],
       ] as LocalPoint[],
     });
+    expect(window.h.elements[0].type).toBe("arrow");
     const hit = hitElementItself({
       point: pointFrom<GlobalPoint>(88, -68),
       element: window.h.elements[0],
