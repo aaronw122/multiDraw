@@ -4,6 +4,7 @@ import {
   render,
   restoreOriginalGetBoundingClientRect,
 } from "@excalidraw/excalidraw/tests/test-utils";
+import { MemoryRouter } from "react-router-dom";
 
 import ExcalidrawApp from "../App";
 
@@ -16,7 +17,11 @@ describe("Test MobileMenu", () => {
   });
 
   beforeEach(async () => {
-    await render(<ExcalidrawApp />);
+    await render(
+      <MemoryRouter initialEntries={["/project/test"]}>
+        <ExcalidrawApp />
+      </MemoryRouter>,
+    );
     h.app.refreshEditorInterface();
   });
 

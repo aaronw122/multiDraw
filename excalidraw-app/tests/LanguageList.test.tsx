@@ -6,12 +6,17 @@ import {
   waitFor,
   render,
 } from "@excalidraw/excalidraw/tests/test-utils";
+import { MemoryRouter } from "react-router-dom";
 
 import ExcalidrawApp from "../App";
 
 describe("Test LanguageList", () => {
   it("rerenders UI on language change", async () => {
-    await render(<ExcalidrawApp />);
+    await render(
+      <MemoryRouter initialEntries={["/project/test"]}>
+        <ExcalidrawApp />
+      </MemoryRouter>,
+    );
 
     // select rectangle tool to show properties menu
     UI.clickTool("rectangle");

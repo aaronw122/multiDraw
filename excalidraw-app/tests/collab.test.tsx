@@ -7,6 +7,7 @@ import { syncInvalidIndices } from "@excalidraw/element";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { act, render, waitFor } from "@excalidraw/excalidraw/tests/test-utils";
 import { vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { StoreIncrement } from "@excalidraw/element";
 
@@ -73,7 +74,11 @@ describe("collaboration", () => {
     const durableIncrements: DurableIncrement[] = [];
     const ephemeralIncrements: EphemeralIncrement[] = [];
 
-    await render(<ExcalidrawApp />);
+    await render(
+      <MemoryRouter initialEntries={["/project/test"]}>
+        <ExcalidrawApp />
+      </MemoryRouter>,
+    );
 
     h.store.onStoreIncrementEmitter.on((increment) => {
       if (StoreIncrement.isDurable(increment)) {
@@ -143,7 +148,11 @@ describe("collaboration", () => {
   });
 
   it("should allow to undo / redo even on force-deleted elements", async () => {
-    await render(<ExcalidrawApp />);
+    await render(
+      <MemoryRouter initialEntries={["/project/test"]}>
+        <ExcalidrawApp />
+      </MemoryRouter>,
+    );
     const rect1Props = {
       type: "rectangle",
       id: "A",
