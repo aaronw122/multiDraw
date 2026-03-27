@@ -50,6 +50,20 @@ vi.mock("../../excalidraw-app/data/firebase.ts", () => {
   };
 });
 
+vi.mock("../../excalidraw-app/data/ProjectStore", () => ({
+  listProjects: async () => [],
+  createProject: async (name: string) => ({
+    id: "test",
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  }),
+  updateProject: async () => {},
+  deleteProject: async () => {},
+  renameProject: async () => {},
+  getProject: async () => null,
+}));
+
 vi.mock("socket.io-client", () => {
   return {
     default: () => {
