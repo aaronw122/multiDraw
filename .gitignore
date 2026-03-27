@@ -1,4 +1,7 @@
 .DS_Store
+excalidraw-app/blob-server/data/
+excalidraw-app/blob-server/node_modules/
+docs/intents/
 .env.development.local
 .env.local
 .env.production.local
