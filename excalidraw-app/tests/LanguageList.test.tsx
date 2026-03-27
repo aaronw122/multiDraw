@@ -48,7 +48,9 @@ describe("Test LanguageList", () => {
     UI.clickTool("rectangle");
     // english lang should display `thin` label
     expect(screen.queryByTitle(/thin/i)).not.toBeNull();
-    fireEvent.click(document.querySelector(".dropdown-menu-button")!);
+    fireEvent.click(
+      document.querySelector('[data-testid="dropdown-menu-button"]')!,
+    );
 
     fireEvent.change(document.querySelector(".dropdown-select__language")!, {
       target: { value: "de-DE" },
