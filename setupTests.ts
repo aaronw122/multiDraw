@@ -10,6 +10,32 @@ import { mockThrottleRAF } from "./packages/excalidraw/tests/helpers/mocks";
 import { yellow } from "./packages/excalidraw/tests/helpers/colorize";
 import { testPolyfills } from "./packages/excalidraw/tests/helpers/polyfills";
 
+// Node 25+ ships a native localStorage that shadows jsdom's implementation.
+// The native version requires --localstorage-file and has broken methods
+// (e.g., clear is undefined). Override it with a simple in-memory shim
+// so that tests relying on localStorage.clear() work correctly.
+if (
+  typeof localStorage === "undefined" ||
+  typeof localStorage.clear !== "function"
+) {
+  const storage = new Map<string, string>();
+  const localStorageShim = {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, String(value)),
+    removeItem: (key: string) => storage.delete(key),
+    clear: () => storage.clear(),
+    get length() {
+      return storage.size;
+    },
+    key: (index: number) => [...storage.keys()][index] ?? null,
+  };
+  Object.defineProperty(globalThis, "localStorage", {
+    value: localStorageShim,
+    writable: true,
+    configurable: true,
+  });
+}
+
 vi.mock("@excalidraw/common", async (importOriginal) => {
   const module = await importOriginal<typeof import("@excalidraw/common")>();
 
