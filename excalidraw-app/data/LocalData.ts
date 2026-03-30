@@ -35,6 +35,22 @@ import { broadcastFileUpdate } from "./tabSync";
 
 const filesStore = createStore("files-db", "files-store");
 
+/**
+ * Deletes all files belonging to a project from the files store.
+ * Files are keyed as `${projectId}:${fileId}`.
+ */
+export const deleteProjectFiles = async (
+  projectId: string,
+): Promise<void> => {
+  const allKeys = await keys<string>(filesStore);
+  const prefix = `${projectId}:`;
+  await Promise.all(
+    allKeys
+      .filter((key) => typeof key === "string" && key.startsWith(prefix))
+      .map((key) => del(key, filesStore)),
+  );
+};
+
 export const localStorageQuotaExceededAtom = atom(false);
 
 class LocalFileManager extends FileManager {

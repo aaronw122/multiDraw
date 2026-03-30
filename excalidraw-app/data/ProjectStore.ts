@@ -1,6 +1,9 @@
 import { createStore, get, set, del, keys, getMany } from "idb-keyval";
 import { nanoid } from "nanoid";
 
+import { sceneStore } from "./SceneStore";
+import { deleteProjectFiles } from "./LocalData";
+
 export interface ProjectMetadata {
   id: string;
   name: string;
@@ -11,21 +14,6 @@ export interface ProjectMetadata {
 }
 
 const projectStore = createStore("multidraw-projects-db", "projects-store");
-
-/**
- * Scene data store — stores elements + appState per project.
- * Keyed by project ID.
- */
-const sceneStore = createStore("multidraw-scenes-db", "scenes-store");
-
-/**
- * Files store — stores binary file data per project.
- * Keyed by `${projectId}:${fileId}`.
- */
-const projectFilesStore = createStore(
-  "multidraw-project-files-db",
-  "project-files-store",
-);
 
 export const listProjects = async (): Promise<ProjectMetadata[]> => {
   const allKeys = await keys<string>(projectStore);
@@ -75,19 +63,11 @@ export const updateProject = async (
 };
 
 export const deleteProject = async (id: string): Promise<void> => {
-  await del(id, projectStore);
-
-  // Delete associated scene data
+  // Delete files first, then scene, then metadata
+  // so orphaned data is recoverable if interrupted
+  await deleteProjectFiles(id);
   await del(id, sceneStore);
-
-  // Delete associated files (keys prefixed with `${id}:`)
-  const allFileKeys = await keys<string>(projectFilesStore);
-  const prefix = `${id}:`;
-  await Promise.all(
-    allFileKeys
-      .filter((key) => typeof key === "string" && key.startsWith(prefix))
-      .map((key) => del(key, projectFilesStore)),
-  );
+  await del(id, projectStore);
 };
 
 export const renameProject = async (
