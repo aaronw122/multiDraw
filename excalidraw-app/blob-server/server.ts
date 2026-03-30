@@ -18,7 +18,13 @@ const FILES_DIR = path.join(DATA_DIR, "files");
 fs.mkdirSync(BLOBS_DIR, { recursive: true });
 fs.mkdirSync(FILES_DIR, { recursive: true });
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3001",
+    process.env.ALLOWED_ORIGIN,
+  ].filter(Boolean) as string[],
+}));
 
 // Collect raw body as Buffer for all POST requests
 const getRawBody = (req: IncomingMessage): Promise<Buffer> => {
@@ -52,7 +58,7 @@ app.post("/api/v2/post/", async (req, res) => {
     const id = crypto.randomBytes(10).toString("hex");
     const filePath = path.join(BLOBS_DIR, `${id}.bin`);
 
-    fs.writeFileSync(filePath, body);
+    await fs.promises.writeFile(filePath, body);
     res.json({ id });
   } catch (err: any) {
     if (err.message === "RequestTooLargeError") {
@@ -74,13 +80,16 @@ app.get("/api/v2/:id", (req, res) => {
 
   const filePath = path.join(BLOBS_DIR, `${id}.bin`);
 
-  if (!fs.existsSync(filePath)) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-
   res.setHeader("Content-Type", "application/octet-stream");
-  fs.createReadStream(filePath).pipe(res);
+  const stream = fs.createReadStream(filePath);
+  stream.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") {
+      res.status(404).json({ error: "Not found" });
+    } else {
+      res.status(500).json({ error: "Internal error" });
+    }
+  });
+  stream.pipe(res);
 });
 
 // POST /api/v2/files/:sceneId — upload a file for a scene
@@ -103,10 +112,10 @@ app.post("/api/v2/files/:sceneId", async (req, res) => {
     const body = await getRawBody(req);
 
     const sceneDir = path.join(FILES_DIR, sceneId);
-    fs.mkdirSync(sceneDir, { recursive: true });
+    await fs.promises.mkdir(sceneDir, { recursive: true });
 
     const filePath = path.join(sceneDir, `${fileId}.bin`);
-    fs.writeFileSync(filePath, body);
+    await fs.promises.writeFile(filePath, body);
 
     res.json({ saved: true });
   } catch (err: any) {
@@ -134,14 +143,17 @@ app.get("/api/v2/files/:sceneId/:fileId", (req, res) => {
 
   const filePath = path.join(FILES_DIR, sceneId, `${fileId}.bin`);
 
-  if (!fs.existsSync(filePath)) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-
   res.setHeader("Content-Type", "application/octet-stream");
   res.setHeader("Cache-Control", "public, max-age=31536000");
-  fs.createReadStream(filePath).pipe(res);
+  const stream = fs.createReadStream(filePath);
+  stream.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") {
+      res.status(404).json({ error: "Not found" });
+    } else {
+      res.status(500).json({ error: "Internal error" });
+    }
+  });
+  stream.pipe(res);
 });
 
 app.listen(PORT, () => {
