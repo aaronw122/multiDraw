@@ -122,7 +122,7 @@ import {
   LocalData,
   localStorageQuotaExceededAtom,
 } from "./data/LocalData";
-import { isBrowserStorageStateNewer } from "./data/tabSync";
+import { isBrowserStorageStateNewer, initTabSync } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
 import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
 import { useHandleAppTheme } from "./useHandleAppTheme";
@@ -391,6 +391,8 @@ const THUMBNAIL_DEBOUNCE_MS = 5000;
 
 const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
   const excalidrawAPI = useExcalidrawAPI();
+  const excalidrawAPIRef = useRef(excalidrawAPI);
+  excalidrawAPIRef.current = excalidrawAPI;
   const navigate = useNavigate();
 
   const [errorMessage, setErrorMessage] = useState("");
@@ -402,9 +404,16 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
 
   const editorInterface = useEditorInterface();
 
-  // Sync projectId atom for deeply nested non-React code
-  useEffect(() => {
+  // Sync projectId atom for deeply nested non-React code.
+  // Set synchronously during render (via ref guard) so code reading the atom
+  // in the same render cycle sees the correct value immediately.
+  const prevProjectIdRef = useRef<string | null>(null);
+  if ((projectId ?? null) !== prevProjectIdRef.current) {
+    prevProjectIdRef.current = projectId ?? null;
     appJotaiStore.set(currentProjectIdAtom, projectId ?? null);
+  }
+  // Clear the atom on unmount only
+  useEffect(() => {
     return () => {
       appJotaiStore.set(currentProjectIdAtom, null);
     };
@@ -477,6 +486,52 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
     // TODO maybe remove this in several months (shipped: 24-03-11)
     migrationAdapter: LibraryLocalStorageMigrationAdapter,
   });
+
+  // Open export dialog from ?export=true query param, but only after the
+  // initial scene has loaded from IDB so the canvas isn't empty.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("export") === "true" && excalidrawAPI) {
+      const api = excalidrawAPI;
+      initialStatePromiseRef.current.promise.then(() => {
+        if (api) {
+          api.updateScene({
+            appState: { openDialog: { name: "imageExport" } },
+          });
+        }
+        // Strip the query param after scene loads so it doesn't re-trigger
+        const url = new URL(window.location.href);
+        url.searchParams.delete("export");
+        window.history.replaceState({}, "", url.toString());
+      });
+    }
+  }, [excalidrawAPI]);
+
+  // Wire up BroadcastChannel-based tab sync so other tabs reload when this
+  // tab saves. The onSceneDirty callback reloads from IDB — this does NOT
+  // trigger a save (which would broadcast again and cause an infinite loop)
+  // because updateScene with CaptureUpdateAction.NEVER skips the onChange
+  // path that calls LocalData.save.
+  useEffect(() => {
+    if (!projectId || !excalidrawAPI) {
+      return;
+    }
+    const cleanup = initTabSync(projectId, {
+      onSceneDirty: () => {
+        const api = excalidrawAPIRef.current;
+        loadScene(projectId).then((stored) => {
+          if (stored && api) {
+            api.updateScene({
+              elements: stored.elements,
+              appState: restoreAppState(stored.appState, null),
+              captureUpdate: CaptureUpdateAction.NEVER,
+            });
+          }
+        });
+      },
+    });
+    return cleanup;
+  }, [projectId, excalidrawAPI]);
 
   const [, forceRefresh] = useState(false);
 
@@ -624,6 +679,12 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
 
     const syncData = debounce(() => {
       if (isTestEnv()) {
+        return;
+      }
+      // When a projectId is set, tab sync is handled by BroadcastChannel
+      // (initTabSync). The legacy localStorage polling below only applies
+      // to the non-project (scratch) mode.
+      if (projectId) {
         return;
       }
       if (
