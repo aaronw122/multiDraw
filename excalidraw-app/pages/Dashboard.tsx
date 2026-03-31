@@ -13,8 +13,6 @@ import { isInitializedImageElement } from "@excalidraw/element";
 
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 
-import type { FileId } from "@excalidraw/element/types";
-
 import {
   listProjects,
   createProject,
@@ -153,8 +151,8 @@ const DashboardShareDialog = ({
 
       // Load files for any initialized image elements
       const fileIds = stored.elements
-        .filter((el) => isInitializedImageElement(el))
-        .map((el) => (el as any).fileId as FileId);
+        .filter(isInitializedImageElement)
+        .map((el) => el.fileId);
 
       let files: BinaryFiles = {};
       if (fileIds.length > 0) {
