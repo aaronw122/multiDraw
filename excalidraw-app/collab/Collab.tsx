@@ -497,7 +497,13 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       ({ roomId, roomKey } = await generateCollaborationLinkData());
       const collabLink = getCollaborationLink({ roomId, roomKey });
       const collabUrl = new URL(collabLink);
-      this.props.navigate(`${collabUrl.pathname}${collabUrl.hash}`);
+      if (this.props.projectId) {
+        this.props.navigate(
+          `/project/${this.props.projectId}${collabUrl.hash}`,
+        );
+      } else {
+        this.props.navigate(`${collabUrl.pathname}${collabUrl.hash}`);
+      }
 
       // Tag the host's project with the collabRoomId so that joining the
       // same room from another tab (or browser) finds the existing project
