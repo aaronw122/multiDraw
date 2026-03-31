@@ -39,9 +39,7 @@ const filesStore = createStore("files-db", "files-store");
  * Deletes all files belonging to a project from the files store.
  * Files are keyed as `${projectId}:${fileId}`.
  */
-export const deleteProjectFiles = async (
-  projectId: string,
-): Promise<void> => {
+export const deleteProjectFiles = async (projectId: string): Promise<void> => {
   const allKeys = await keys<string>(filesStore);
   const prefix = `${projectId}:`;
   await Promise.all(

@@ -18,13 +18,15 @@ const FILES_DIR = path.join(DATA_DIR, "files");
 fs.mkdirSync(BLOBS_DIR, { recursive: true });
 fs.mkdirSync(FILES_DIR, { recursive: true });
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:3001",
-    process.env.ALLOWED_ORIGIN,
-  ].filter(Boolean) as string[],
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:3001",
+      process.env.ALLOWED_ORIGIN,
+    ].filter(Boolean) as string[],
+  }),
+);
 
 // Collect raw body as Buffer for all POST requests
 const getRawBody = (req: IncomingMessage): Promise<Buffer> => {
