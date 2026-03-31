@@ -392,6 +392,8 @@ const THUMBNAIL_DEBOUNCE_MS = 5000;
 
 const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
   const excalidrawAPI = useExcalidrawAPI();
+  const excalidrawAPIRef = useRef(excalidrawAPI);
+  excalidrawAPIRef.current = excalidrawAPI;
   const navigate = useNavigate();
 
   const [errorMessage, setErrorMessage] = useState("");
@@ -458,15 +460,18 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("export") === "true" && excalidrawAPI) {
+      const api = excalidrawAPI;
       initialStatePromiseRef.current.promise.then(() => {
-        excalidrawAPI.updateScene({
-          appState: { openDialog: { name: "imageExport" } },
-        });
+        if (api) {
+          api.updateScene({
+            appState: { openDialog: { name: "imageExport" } },
+          });
+        }
+        // Strip the query param after scene loads so it doesn't re-trigger
+        const url = new URL(window.location.href);
+        url.searchParams.delete("export");
+        window.history.replaceState({}, "", url.toString());
       });
-      // Strip the query param so it doesn't re-trigger
-      const url = new URL(window.location.href);
-      url.searchParams.delete("export");
-      window.history.replaceState({}, "", url.toString());
     }
   }, [excalidrawAPI]);
 
@@ -481,9 +486,10 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
     }
     const cleanup = initTabSync(projectId, {
       onSceneDirty: () => {
+        const api = excalidrawAPIRef.current;
         loadScene(projectId).then((stored) => {
-          if (stored && excalidrawAPI) {
-            excalidrawAPI.updateScene({
+          if (stored && api) {
+            api.updateScene({
               elements: stored.elements,
               appState: restoreAppState(stored.appState, null),
               captureUpdate: CaptureUpdateAction.NEVER,
