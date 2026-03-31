@@ -454,6 +454,23 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
     }
   }, [excalidrawAPI]);
 
+  // Auto-start collaboration when navigated with ?startCollab=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("startCollab") !== "1" || !collabAPI) {
+      return;
+    }
+    // Strip the query param from the URL
+    params.delete("startCollab");
+    const qs = params.toString();
+    const cleanUrl = `${window.location.pathname}${qs ? `?${qs}` : ""}${
+      window.location.hash
+    }`;
+    window.history.replaceState({}, "", cleanUrl);
+
+    collabAPI.startCollaboration(null);
+  }, [collabAPI]);
+
   useHandleLibrary({
     excalidrawAPI,
     adapter: LibraryIndexedDBAdapter,

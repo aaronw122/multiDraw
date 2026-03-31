@@ -9,6 +9,8 @@ import {
   copyIcon,
 } from "@excalidraw/excalidraw/components/icons";
 
+import { isInitializedImageElement } from "@excalidraw/element";
+
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 
 import {
@@ -20,6 +22,7 @@ import {
 import { exportAllProjects } from "../data/exportAll";
 import { loadScene } from "../data/SceneStore";
 import { exportToBackend } from "../data/index";
+import { LocalData } from "../data/LocalData";
 
 import { STORAGE_KEYS } from "../app_constants";
 
@@ -131,7 +134,7 @@ const DashboardShareDialog = ({
 
   const handleStartCollab = () => {
     localStorage.setItem(LAST_PROJECT_KEY, project.id);
-    navigate(`/project/${project.id}#room`);
+    navigate(`/project/${project.id}?startCollab=1`);
   };
 
   const handleExportToLink = async () => {
@@ -146,7 +149,22 @@ const DashboardShareDialog = ({
         return;
       }
 
-      const files: BinaryFiles = {};
+      // Load files for any initialized image elements
+      const fileIds = stored.elements
+        .filter(isInitializedImageElement)
+        .map((el) => el.fileId);
+
+      let files: BinaryFiles = {};
+      if (fileIds.length > 0) {
+        const loaded = await LocalData.fileStorage.getFiles(
+          fileIds,
+          project.id,
+        );
+        if (loaded.loadedFiles.length > 0) {
+          files = Object.fromEntries(loaded.loadedFiles.map((f) => [f.id, f]));
+        }
+      }
+
       const result = await exportToBackend(
         stored.elements,
         stored.appState,
