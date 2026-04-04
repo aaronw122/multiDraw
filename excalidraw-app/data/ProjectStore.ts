@@ -11,6 +11,7 @@ export interface ProjectMetadata {
   updatedAt: number;
   thumbnail?: string;
   collabRoomId?: string;
+  collabRole?: "host" | "joiner";
 }
 
 const projectStore = createStore("multidraw-projects-db", "projects-store");

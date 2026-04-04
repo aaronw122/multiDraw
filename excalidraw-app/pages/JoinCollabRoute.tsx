@@ -36,17 +36,22 @@ const JoinCollabRoute = () => {
       const collabHash = `#room=${roomId},${roomKey}`;
 
       try {
-        // Check if we already have a local project for this collab room
+        // Check if we already have a local joiner project for this collab room.
+        // Skip host projects — in same-browser testing, both tabs share IndexedDB
+        // and reusing the host's project causes data corruption.
         const existing = await findProjectByCollabRoomId(roomId);
 
-        if (existing) {
+        if (existing && existing.collabRole !== "host") {
           navigate(`/project/${existing.id}${collabHash}`, { replace: true });
           return;
         }
 
         // Create a new project for this collab session
         const project = await createProject("Shared Drawing");
-        await updateProject(project.id, { collabRoomId: roomId });
+        await updateProject(project.id, {
+          collabRoomId: roomId,
+          collabRole: "joiner",
+        });
 
         navigate(`/project/${project.id}${collabHash}`, { replace: true });
       } catch (err) {

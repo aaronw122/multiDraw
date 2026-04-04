@@ -509,9 +509,10 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       // same room from another tab (or browser) finds the existing project
       // instead of creating a duplicate.
       if (this.props.projectId) {
-        updateProject(this.props.projectId, { collabRoomId: roomId }).catch(
-          (err) => console.error("Failed to save collabRoomId:", err),
-        );
+        updateProject(this.props.projectId, {
+          collabRoomId: roomId,
+          collabRole: "host",
+        }).catch((err) => console.error("Failed to save collabRoomId:", err));
       }
     }
 

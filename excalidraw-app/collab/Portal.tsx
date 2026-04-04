@@ -77,6 +77,7 @@ class Portal {
     return !!(
       this.socketInitialized &&
       this.socket &&
+      this.socket.connected &&
       this.roomId &&
       this.roomKey
     );

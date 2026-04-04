@@ -1,13 +1,16 @@
 import crypto from "crypto";
 import fs from "fs";
+import http from "http";
 import path from "path";
 
 import cors from "cors";
 import express from "express";
+import { Server as SocketIOServer } from "socket.io";
 
 import type { IncomingMessage } from "http";
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3003;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const MAX_PAYLOAD_BYTES = 5 * 1024 * 1024; // 5MB
@@ -158,7 +161,129 @@ app.get("/api/v2/files/:sceneId/:fileId", (req, res) => {
   stream.pipe(res);
 });
 
-app.listen(PORT, () => {
+// --- WebSocket relay (replaces excalidraw-room) ---
+
+const io = new SocketIOServer(server, {
+  transports: ["websocket", "polling"],
+  cors: {
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:3001",
+      process.env.ALLOWED_ORIGIN,
+    ].filter(Boolean) as string[],
+    methods: ["GET", "POST"],
+  },
+});
+
+// Track who follows whom: leader socketId -> set of follower socketIds
+const followState = new Map<string, Set<string>>();
+
+io.on("connection", (socket) => {
+  io.to(socket.id).emit("init-room");
+
+  socket.on("join-room", (roomId: string) => {
+    socket.join(roomId);
+
+    const clients = Array.from(io.sockets.adapter.rooms.get(roomId) ?? []);
+
+    if (clients.length <= 1) {
+      // first user in room — tell them so they can load the scene immediately
+      io.to(socket.id).emit("first-in-room");
+    } else {
+      // notify existing clients about the new user
+      socket.broadcast.to(roomId).emit("new-user", socket.id);
+    }
+
+    // tell everyone in the room who's connected
+    io.in(roomId).emit("room-user-change", clients);
+  });
+
+  socket.on(
+    "server-broadcast",
+    (roomId: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
+      socket.broadcast.to(roomId).emit("client-broadcast", encryptedData, iv);
+    },
+  );
+
+  socket.on(
+    "server-volatile-broadcast",
+    (roomId: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
+      socket.volatile.broadcast
+        .to(roomId)
+        .emit("client-broadcast", encryptedData, iv);
+    },
+  );
+
+  socket.on(
+    "user-follow",
+    (payload: { userToFollow: { socketId: string }; action: string }) => {
+      const leaderSocketId = payload.userToFollow?.socketId;
+      if (!leaderSocketId) {
+        return;
+      }
+
+      if (payload.action === "FOLLOW") {
+        // track the follow relationship
+        if (!followState.has(leaderSocketId)) {
+          followState.set(leaderSocketId, new Set());
+        }
+        followState.get(leaderSocketId)!.add(socket.id);
+
+        // join the follow@ room so viewport broadcasts reach this follower
+        socket.join(`follow@${leaderSocketId}`);
+      } else {
+        // UNFOLLOW
+        followState.get(leaderSocketId)?.delete(socket.id);
+        if (followState.get(leaderSocketId)?.size === 0) {
+          followState.delete(leaderSocketId);
+        }
+        socket.leave(`follow@${leaderSocketId}`);
+      }
+
+      // notify the leader who is following them (as SocketId[])
+      const followers = Array.from(followState.get(leaderSocketId) ?? []);
+      const leaderSocket = io.sockets.sockets.get(leaderSocketId);
+      if (leaderSocket) {
+        leaderSocket.emit("user-follow-room-change", followers);
+      }
+    },
+  );
+
+  socket.on("disconnecting", () => {
+    const rooms = Array.from(socket.rooms).filter(
+      (r) => r !== socket.id && !r.startsWith("follow@"),
+    );
+
+    // update room-user-change for collab rooms
+    for (const roomId of rooms) {
+      const clients = Array.from(
+        io.sockets.adapter.rooms.get(roomId) ?? [],
+      ).filter((id) => id !== socket.id);
+      io.in(roomId).emit("room-user-change", clients);
+    }
+
+    // clean up follow state: remove as follower from any leader
+    for (const [leaderId, followers] of followState) {
+      if (followers.delete(socket.id)) {
+        // notify the leader of updated follower list
+        const leaderSocket = io.sockets.sockets.get(leaderId);
+        if (leaderSocket) {
+          leaderSocket.emit("user-follow-room-change", Array.from(followers));
+        }
+        if (followers.size === 0) {
+          followState.delete(leaderId);
+        }
+      }
+    }
+
+    // clean up as leader
+    followState.delete(socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`Blob server listening on port ${PORT}, data: ${DATA_DIR}`);
+  console.log(
+    `Blob + collab server listening on port ${PORT}, data: ${DATA_DIR}`,
+  );
 });

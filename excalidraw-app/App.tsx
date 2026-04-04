@@ -447,21 +447,7 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
   });
   const collabError = useAtomValue(collabErrorIndicatorAtom);
 
-  // Auto-open export dialog when navigated from dashboard with query param
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("export") === "true" && excalidrawAPI) {
-      excalidrawAPI.updateScene({
-        appState: { openDialog: { name: "imageExport" } },
-      });
-    }
-    // Clean up query params without a page reload
-    if (params.get("export")) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("export");
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [excalidrawAPI]);
+  // NOTE: export dialog handling moved below — waits for scene load from IDB
 
   // Auto-start collaboration when navigated with ?startCollab=1
   useEffect(() => {
