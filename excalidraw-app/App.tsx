@@ -841,7 +841,7 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
               viewBackgroundColor: appState.viewBackgroundColor,
             },
             files,
-            maxWidthOrHeight: 320,
+            maxWidthOrHeight: 640,
           });
           const reader = new FileReader();
           reader.onloadend = () => {
