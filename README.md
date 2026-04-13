@@ -4,7 +4,7 @@ A multi-project whiteboard app built on [Excalidraw](https://github.com/excalidr
 
 ## What it does
 
-Excalidraw gives you a single canvas. Multidraw wraps it with project management so you can:
+Excalidraw gives you a single canvas. Multidraw wraps it with a project management dashboard so you can:
 
 - **Save multiple drawings** — each with its own name, canvas state, and files
 - **Dashboard view** — browse, rename, delete, and sort your projects
