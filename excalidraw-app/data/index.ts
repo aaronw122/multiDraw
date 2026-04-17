@@ -242,8 +242,8 @@ export const importFromBackend = async (
 };
 
 type ExportToBackendResult =
-  | { url: null; errorMessage: string }
-  | { url: string; errorMessage: null };
+  | { url: null; errorMessage: string; blobId: null }
+  | { url: string; errorMessage: null; blobId: string };
 
 export const exportToBackend = async (
   elements: readonly ExcalidrawElement[],
@@ -287,18 +287,35 @@ export const exportToBackend = async (
 
       await saveFilesToBackend(json.id, filesToUpload);
 
-      return { url: urlString, errorMessage: null };
+      return { url: urlString, errorMessage: null, blobId: json.id };
     } else if (json.error_class === "RequestTooLargeError") {
       return {
         url: null,
         errorMessage: t("alerts.couldNotCreateShareableLinkTooBig"),
+        blobId: null,
       };
     }
 
-    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
+    return {
+      url: null,
+      errorMessage: t("alerts.couldNotCreateShareableLink"),
+      blobId: null,
+    };
   } catch (error: any) {
     console.error(error);
 
-    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
+    return {
+      url: null,
+      errorMessage: t("alerts.couldNotCreateShareableLink"),
+      blobId: null,
+    };
+  }
+};
+
+export const deleteFromBackend = async (id: string): Promise<void> => {
+  try {
+    await fetch(`${BACKEND_V2_GET}${id}`, { method: "DELETE" });
+  } catch (error: any) {
+    console.warn("Failed to delete blob from backend:", id, error);
   }
 };

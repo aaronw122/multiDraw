@@ -4,6 +4,8 @@ import { nanoid } from "nanoid";
 import { sceneStore } from "./SceneStore";
 import { deleteProjectFiles } from "./LocalData";
 
+import { deleteFromBackend } from "./index";
+
 export interface ProjectMetadata {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export interface ProjectMetadata {
   thumbnail?: string;
   collabRoomId?: string;
   collabRole?: "host" | "joiner";
+  sharedBlobIds?: string[];
 }
 
 const projectStore = createStore("multidraw-projects-db", "projects-store");
@@ -64,6 +67,14 @@ export const updateProject = async (
 };
 
 export const deleteProject = async (id: string): Promise<void> => {
+  // Best-effort cleanup of shareable link blobs on the server
+  const metadata = await get<ProjectMetadata>(id, projectStore);
+  if (metadata?.sharedBlobIds?.length) {
+    await Promise.allSettled(
+      metadata.sharedBlobIds.map((blobId) => deleteFromBackend(blobId)),
+    );
+  }
+
   // Delete files first, then scene, then metadata
   // so orphaned data is recoverable if interrupted
   await deleteProjectFiles(id);
@@ -76,6 +87,25 @@ export const renameProject = async (
   name: string,
 ): Promise<void> => {
   await updateProject(id, { name });
+};
+
+export const addSharedBlobId = async (
+  projectId: string,
+  blobId: string,
+): Promise<void> => {
+  const existing = await get<ProjectMetadata>(projectId, projectStore);
+  if (!existing) {
+    return;
+  }
+  const ids = existing.sharedBlobIds ?? [];
+  if (!ids.includes(blobId)) {
+    ids.push(blobId);
+  }
+  await set(
+    projectId,
+    { ...existing, sharedBlobIds: ids, updatedAt: Date.now() },
+    projectStore,
+  );
 };
 
 export const findProjectByCollabRoomId = async (

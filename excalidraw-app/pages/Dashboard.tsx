@@ -18,6 +18,7 @@ import {
   createProject,
   deleteProject,
   renameProject,
+  addSharedBlobId,
 } from "../data/ProjectStore";
 import { exportAllProjects } from "../data/exportAll";
 import { loadScene } from "../data/SceneStore";
@@ -173,6 +174,11 @@ const DashboardShareDialog = ({
 
       if (result.url) {
         setShareState({ status: "success", url: result.url });
+        if (result.blobId) {
+          addSharedBlobId(project.id, result.blobId).catch(() => {
+            // best-effort tracking
+          });
+        }
       } else {
         setShareState({
           status: "error",

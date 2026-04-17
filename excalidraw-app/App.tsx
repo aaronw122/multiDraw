@@ -113,7 +113,11 @@ import {
   importUsernameFromLocalStorage,
 } from "./data/localStorage";
 import { loadScene } from "./data/SceneStore";
-import { createProject, updateProject } from "./data/ProjectStore";
+import {
+  createProject,
+  updateProject,
+  addSharedBlobId,
+} from "./data/ProjectStore";
 
 import { loadFilesFromBackend } from "./data/backendFiles";
 import {
@@ -908,7 +912,7 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
       throw new Error(t("alerts.cannotExportEmptyCanvas"));
     }
     try {
-      const { url, errorMessage } = await exportToBackend(
+      const { url, errorMessage, blobId } = await exportToBackend(
         exportedElements,
         {
           ...appState,
@@ -925,6 +929,12 @@ const ExcalidrawWrapper = ({ projectId }: { projectId?: string }) => {
 
       if (url) {
         setLatestShareableLink(url);
+      }
+
+      if (blobId && projectId) {
+        addSharedBlobId(projectId, blobId).catch(() => {
+          // best-effort tracking — don't block the share flow
+        });
       }
     } catch (error: any) {
       if (error.name !== "AbortError") {
