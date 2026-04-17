@@ -281,9 +281,65 @@ io.on("connection", (socket) => {
   });
 });
 
+// --- Blob TTL cleanup sweep ---
+
+const BLOB_TTL_DAYS = parseInt(process.env.BLOB_TTL_DAYS || "30", 10);
+const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+async function cleanupExpiredBlobs(): Promise<void> {
+  const maxAge = BLOB_TTL_DAYS * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  let deleted = 0;
+
+  try {
+    const entries = await fs.promises.readdir(BLOBS_DIR);
+
+    for (const entry of entries) {
+      if (!entry.endsWith(".bin")) {
+        continue;
+      }
+
+      const blobPath = path.join(BLOBS_DIR, entry);
+
+      try {
+        const stat = await fs.promises.stat(blobPath);
+
+        if (now - stat.mtimeMs > maxAge) {
+          const id = entry.replace(/\.bin$/, "");
+
+          // Delete the blob file
+          await fs.promises.unlink(blobPath);
+
+          // Delete associated files directory if it exists
+          const filesDir = path.join(FILES_DIR, id);
+          await fs.promises.rm(filesDir, { recursive: true, force: true });
+
+          deleted++;
+        }
+      } catch (err) {
+        // Skip individual file errors (e.g. deleted between readdir and stat)
+        continue;
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("Blob cleanup sweep failed:", err);
+    return;
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `Blob cleanup: deleted ${deleted} expired blob(s) (TTL: ${BLOB_TTL_DAYS}d)`,
+  );
+}
+
 server.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(
     `Blob + collab server listening on port ${PORT}, data: ${DATA_DIR}`,
   );
+
+  // Run cleanup on startup, then every 6 hours
+  cleanupExpiredBlobs();
+  setInterval(cleanupExpiredBlobs, CLEANUP_INTERVAL_MS);
 });
